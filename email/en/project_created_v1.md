@@ -7,8 +7,4 @@ Project: {{project_url}}
 Title: {{project_title}}
 
 It usually takes about {{ready_eta}} to finish.
-I'll send you one more email when the final video is ready.
-
-- Igor
-
-Sent from my iPhone
+You will receive one more email when the final video is ready.

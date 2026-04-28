@@ -4,9 +4,11 @@ These rules are mandatory for all email templates in `email/en` and `email/ru`.
 
 ## Voice and Sender
 
-- Write emails as a personal note from `Igor`.
-- Do not write from `team`, `support team`, or any generic company voice.
-- Keep the tone human, direct, and natural, like a real short message written right now.
+- Split voice by email type:
+- Onboarding/re-engagement emails (for example `welcome_v1`, `follow_up_24h_v1`, `reply_bonus_confirmed_v1`, `subscription_cancelled_winback_v1`) should be written as a personal note from `Igor`.
+- Service lifecycle emails (`project_created_v1`, `project_ready_v1`) must be neutral system notifications.
+- For service lifecycle emails, do not add personal signatures (for example `- Igor`) or device footers (for example `Sent from my iPhone`).
+- Do not write from `team`, `support team`, or any generic company voice unless explicitly requested.
 
 ## Style Consistency
 
