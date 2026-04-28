@@ -35,6 +35,7 @@ export const GET = withApiError(async function GET() {
       includeDefaultMusic: true,
       addOverlay: true,
       includeCallToAction: true,
+      projectEmailsEnabled: true,
       autoApproveScript: true,
       autoApproveAudio: true,
       watermarkEnabled: true,
@@ -97,6 +98,7 @@ export const GET = withApiError(async function GET() {
     includeDefaultMusic: settings.includeDefaultMusic,
     addOverlay: settings.addOverlay,
     includeCallToAction: (settings as any)?.includeCallToAction ?? true,
+    projectEmailsEnabled: (settings as any)?.projectEmailsEnabled ?? true,
     autoApproveScript: settings.autoApproveScript,
     autoApproveAudio: settings.autoApproveAudio,
     watermarkEnabled: (settings as any)?.watermarkEnabled ?? true,
@@ -160,6 +162,7 @@ export const PATCH = withApiError(async function PATCH(req: NextRequest) {
   else if (key === 'watermarkEnabled') updateData.watermarkEnabled = value;
   else if (key === 'captionsEnabled') updateData.captionsEnabled = value;
   else if (key === 'includeCallToAction') updateData.includeCallToAction = value;
+  else if (key === 'projectEmailsEnabled') updateData.projectEmailsEnabled = value;
   else if (key === 'characterSelection') {
     if (value === null) {
       updateData.preferredCharacter = null;
@@ -295,6 +298,9 @@ export const PATCH = withApiError(async function PATCH(req: NextRequest) {
   }
   if (key === 'includeCallToAction') {
     return ok({ includeCallToAction: !!(updated as any).includeCallToAction });
+  }
+  if (key === 'projectEmailsEnabled') {
+    return ok({ projectEmailsEnabled: !!(updated as any).projectEmailsEnabled });
   }
   return ok({ [key]: value } as any);
 }, 'Failed to update settings');

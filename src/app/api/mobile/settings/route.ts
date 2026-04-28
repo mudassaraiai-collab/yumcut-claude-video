@@ -58,6 +58,7 @@ export const GET = withApiError(async function GET(req: NextRequest) {
     includeDefaultMusic: settings.includeDefaultMusic,
     addOverlay: settings.addOverlay,
     includeCallToAction: (settings as any)?.includeCallToAction ?? true,
+    projectEmailsEnabled: (settings as any)?.projectEmailsEnabled ?? true,
     autoApproveScript: settings.autoApproveScript,
     autoApproveAudio: settings.autoApproveAudio,
     watermarkEnabled: (settings as any)?.watermarkEnabled ?? true,
@@ -105,6 +106,7 @@ export const PATCH = withApiError(async function PATCH(req: NextRequest) {
   else if (key === 'includeDefaultMusic') updateData.includeDefaultMusic = value;
   else if (key === 'addOverlay') updateData.addOverlay = value;
   else if (key === 'includeCallToAction') updateData.includeCallToAction = value;
+  else if (key === 'projectEmailsEnabled') updateData.projectEmailsEnabled = value;
   else if (key === 'autoApproveScript') updateData.autoApproveScript = value;
   else if (key === 'autoApproveAudio') updateData.autoApproveAudio = value;
   else if (key === 'watermarkEnabled') updateData.watermarkEnabled = value;
@@ -215,6 +217,9 @@ export const PATCH = withApiError(async function PATCH(req: NextRequest) {
     }
     if (key === 'includeCallToAction') {
       return ok({ includeCallToAction: !!(updated as any).includeCallToAction });
+    }
+    if (key === 'projectEmailsEnabled') {
+      return ok({ projectEmailsEnabled: !!(updated as any).projectEmailsEnabled });
     }
     if (key === 'scriptCreationGuidance') {
       return ok({ scriptCreationGuidance: (updated as any).scriptCreationGuidance ?? '' });

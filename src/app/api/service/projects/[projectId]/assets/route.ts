@@ -7,6 +7,7 @@ import { assertServiceAuth } from '@/server/auth';
 import { ProjectStatus } from '@/shared/constants/status';
 import { toStoredMediaPath, recordStoragePublicUrlHint } from '@/server/storage';
 import { notifyProjectStatusChange } from '@/server/telegram';
+import { sendProjectReadyEmail } from '@/server/emails/project-lifecycle';
 
 type Params = { projectId: string };
 
@@ -42,6 +43,34 @@ export const POST = withApiError(async function POST(req: NextRequest, { params 
         await notifyProjectStatusChange(project.id, ProjectStatus.Done);
       } catch (err) {
         console.error('Failed to send Telegram notification', err);
+      }
+      try {
+        const owner = await prisma.user.findUnique({
+          where: { id: project.userId },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            preferredLanguage: true,
+            settings: {
+              select: { projectEmailsEnabled: true },
+            },
+          },
+        });
+        if (owner) {
+          await sendProjectReadyEmail({
+            userId: owner.id,
+            email: owner.email,
+            name: owner.name,
+            preferredLanguage: owner.preferredLanguage,
+            projectId: project.id,
+            projectTitle: project.title,
+            finalVideoUrl: path,
+            projectEmailsEnabled: owner.settings?.projectEmailsEnabled ?? true,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to send project ready email', err);
       }
     }
   }

@@ -1,0 +1,2 @@
+ALTER TABLE `UserSettings`
+  ADD COLUMN `projectEmailsEnabled` BOOLEAN NOT NULL DEFAULT true;

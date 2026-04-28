@@ -13,6 +13,7 @@ const userFindUnique = vi.hoisted(() => vi.fn());
 const userUpdate = vi.hoisted(() => vi.fn());
 const assertDaemonAuth = vi.hoisted(() => vi.fn());
 const notifyProjectStatusChange = vi.hoisted(() => vi.fn());
+const sendProjectReadyEmail = vi.hoisted(() => vi.fn());
 
 vi.mock('@/server/db', () => ({
   prisma: {
@@ -33,6 +34,10 @@ vi.mock('@/server/auth', () => ({
 
 vi.mock('@/server/telegram', () => ({
   notifyProjectStatusChange,
+}));
+
+vi.mock('@/server/emails/project-lifecycle', () => ({
+  sendProjectReadyEmail,
 }));
 
 function makeRequest(projectId: string, body: Record<string, unknown>) {
@@ -58,6 +63,7 @@ describe('daemon status token refunds on project failure', () => {
     statusHistoryCreate.mockResolvedValue({});
     userUpdate.mockResolvedValue({});
     notifyProjectStatusChange.mockResolvedValue(undefined);
+    sendProjectReadyEmail.mockResolvedValue({ sent: true, skipped: false, error: null });
     transaction.mockImplementation(async (callback: any) => callback({
       project: { update: projectUpdate },
       audioCandidate: { updateMany: vi.fn(), findUnique: vi.fn() },
@@ -139,5 +145,65 @@ describe('daemon status token refunds on project failure', () => {
       }),
     }));
   });
-});
 
+  it('sends project-ready email when project transitions to done', async () => {
+    projectFindUnique
+      .mockResolvedValueOnce({
+        id: 'project-1',
+        userId: 'user-1',
+        status: ProjectStatus.ProcessVideoMain,
+        currentDaemonId: 'daemon-1',
+        languages: ['en'],
+      })
+      .mockResolvedValueOnce({
+        id: 'project-1',
+        title: 'Project title',
+        finalVideoUrl: 'https://cdn.example.com/final.mp4',
+        finalVideoPath: null,
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          name: 'User Name',
+          preferredLanguage: 'en',
+          settings: { projectEmailsEnabled: true },
+        },
+      });
+
+    const route = await import('@/app/api/daemon/projects/[projectId]/status/route');
+    const req = makeRequest('project-1', {
+      status: ProjectStatus.Done,
+      message: 'Video ready',
+      extra: { finalVideoPaths: { en: 'video/final.mp4' } },
+    });
+
+    const res = await route.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) });
+    expect(res.status).toBe(200);
+    expect(sendProjectReadyEmail).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user-1',
+      email: 'user@example.com',
+      projectId: 'project-1',
+      finalVideoUrl: 'https://cdn.example.com/final.mp4',
+    }));
+  });
+
+  it('does not send project-ready email when status is already done', async () => {
+    projectFindUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+      status: ProjectStatus.Done,
+      currentDaemonId: 'daemon-1',
+      languages: ['en'],
+    });
+
+    const route = await import('@/app/api/daemon/projects/[projectId]/status/route');
+    const req = makeRequest('project-1', {
+      status: ProjectStatus.Done,
+      message: 'Video ready',
+      extra: { finalVideoPaths: { en: 'video/final.mp4' } },
+    });
+
+    const res = await route.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) });
+    expect(res.status).toBe(200);
+    expect(sendProjectReadyEmail).not.toHaveBeenCalled();
+  });
+});

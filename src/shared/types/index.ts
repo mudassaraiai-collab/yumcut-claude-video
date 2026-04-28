@@ -18,6 +18,7 @@ export interface UserSettingsDTO {
   includeDefaultMusic: boolean;
   addOverlay: boolean;
   includeCallToAction: boolean;
+  projectEmailsEnabled: boolean;
   autoApproveScript: boolean;
   autoApproveAudio: boolean;
   watermarkEnabled: boolean;

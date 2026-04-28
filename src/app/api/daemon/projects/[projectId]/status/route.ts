@@ -12,6 +12,8 @@ import { normalizeLanguageList, DEFAULT_LANGUAGE } from '@/shared/constants/lang
 import { storeTemplateImageMetadata } from '@/server/projects/helpers';
 import { TOKEN_TRANSACTION_TYPES } from '@/shared/constants/token-costs';
 import { PROJECT_RELATED_TOKEN_TYPES, extractProjectIdFromTokenMetadata, toUsedTokensFromDelta } from '@/server/admin/token-usage';
+import { normalizeMediaUrl } from '@/server/storage';
+import { sendProjectReadyEmail } from '@/server/emails/project-lifecycle';
 
 type Params = { projectId: string };
 
@@ -66,6 +68,7 @@ export const POST = withApiError(async function POST(req: NextRequest, { params 
   if (project.currentDaemonId && project.currentDaemonId !== daemonId) {
     return forbidden('Project locked by another daemon');
   }
+  const previousStatus = project.status;
 
   const normalizedLanguages = normalizeLanguageList((project as any)?.languages ?? (project as any)?.targetLanguage ?? DEFAULT_LANGUAGE, DEFAULT_LANGUAGE);
   const templateImageMetadataRaw = (extra as any)?.templateImageMetadata;
@@ -173,6 +176,51 @@ export const POST = withApiError(async function POST(req: NextRequest, { params 
     console.error('Failed to send Telegram notification', err);
   }
 
+  if (status === ProjectStatus.Done && previousStatus !== ProjectStatus.Done) {
+    try {
+      const updatedProject = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: {
+          id: true,
+          title: true,
+          finalVideoUrl: true,
+          finalVideoPath: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              preferredLanguage: true,
+              settings: {
+                select: { projectEmailsEnabled: true },
+              },
+            },
+          },
+        },
+      });
+
+      const videoFromExtra = pickFinalVideoUrlFromStatusExtra(extra, normalizedLanguages);
+      const finalVideoUrl = updatedProject
+        ? (updatedProject.finalVideoUrl || normalizeMediaUrl(updatedProject.finalVideoPath) || videoFromExtra)
+        : videoFromExtra;
+
+      if (updatedProject?.user) {
+        await sendProjectReadyEmail({
+          userId: updatedProject.user.id,
+          email: updatedProject.user.email,
+          name: updatedProject.user.name,
+          preferredLanguage: updatedProject.user.preferredLanguage,
+          projectId: updatedProject.id,
+          projectTitle: updatedProject.title,
+          finalVideoUrl,
+          projectEmailsEnabled: updatedProject.user.settings?.projectEmailsEnabled ?? true,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send project ready email', err);
+    }
+  }
+
   return ok({ ok: true });
 }, 'Failed to update project status');
 function normalizeLanguageCodes(input: unknown): Set<string> {
@@ -236,6 +284,23 @@ function shouldNotifyStatus(status: ProjectStatus, extra: unknown, languages: st
     default:
       return true;
   }
+}
+
+function pickFinalVideoUrlFromStatusExtra(extra: unknown, languages: string[]): string | null {
+  const payload = extra as Record<string, unknown> | undefined;
+  if (!payload) return null;
+  const direct = typeof payload.finalVideoUrl === 'string' ? payload.finalVideoUrl.trim() : '';
+  if (direct) return direct;
+
+  const map = payload.finalVideoPaths;
+  if (!map || typeof map !== 'object') return null;
+  const record = map as Record<string, string>;
+  for (const language of languages) {
+    const value = typeof record[language] === 'string' ? record[language].trim() : '';
+    if (value) return value;
+  }
+  const fallback = Object.values(record).find((value) => typeof value === 'string' && value.trim().length > 0);
+  return typeof fallback === 'string' ? fallback : null;
 }
 
 function normalizeTemplateImageMetadata(entries: TemplateImageMetadataInput[]): NormalizedTemplateImageMetadata[] {

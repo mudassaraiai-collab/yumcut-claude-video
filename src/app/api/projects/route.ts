@@ -20,6 +20,7 @@ import { normalizeTemplateCustomData, type TemplateCustomData } from '@/shared/t
 import { getAdminVoiceProviderSettings } from '@/server/admin/voice-providers';
 import { buildVoiceProviderSet } from '@/shared/constants/voice-providers';
 import { getProjectCreationSettings } from '@/server/admin/project-creation';
+import { sendProjectCreatedEmail } from '@/server/emails/project-lifecycle';
 
 export const GET = withApiError(async function GET(req: NextRequest) {
   const auth = await authenticateApiRequest(req);
@@ -100,12 +101,17 @@ export const POST = withApiError(async function POST(req: NextRequest) {
   // Create project
   let ownerName: string | null = auth.sessionUser?.name ?? null;
   let ownerEmail: string | null = auth.sessionUser?.email ?? null;
+  let ownerPreferredLanguage: string | null = (auth.sessionUser as any)?.preferredLanguage ?? null;
   let adminFlag = auth.sessionUser?.isAdmin ?? null;
 
-  if (!ownerName || !ownerEmail || adminFlag == null) {
-    const dbUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, isAdmin: true } });
+  if (!ownerName || !ownerEmail || !ownerPreferredLanguage || adminFlag == null) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, preferredLanguage: true, isAdmin: true },
+    });
     ownerName = ownerName ?? dbUser?.name ?? null;
     ownerEmail = ownerEmail ?? dbUser?.email ?? null;
+    ownerPreferredLanguage = ownerPreferredLanguage ?? dbUser?.preferredLanguage ?? null;
     adminFlag = adminFlag ?? dbUser?.isAdmin ?? false;
   }
   const isAdmin = !!adminFlag;
@@ -325,6 +331,8 @@ export const POST = withApiError(async function POST(req: NextRequest) {
 
   const finalOwnerName = ownerName;
   const finalOwnerEmail = ownerEmail;
+  const finalOwnerPreferredLanguage = ownerPreferredLanguage;
+  const projectEmailsEnabled = (userSettings as any)?.projectEmailsEnabled ?? true;
   let projectUrl: string | null = null;
   const base = config.NEXTAUTH_URL?.trim();
   if (base) {
@@ -342,6 +350,19 @@ export const POST = withApiError(async function POST(req: NextRequest) {
   }).catch((err) => {
     // eslint-disable-next-line no-console
     console.error('Failed to notify admins about new project', err);
+  });
+
+  sendProjectCreatedEmail({
+    userId,
+    email: finalOwnerEmail,
+    name: finalOwnerName,
+    preferredLanguage: finalOwnerPreferredLanguage,
+    projectId: project.id,
+    projectTitle: project.title,
+    projectEmailsEnabled,
+  }).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('Failed to send project created email', err);
   });
 
   return ok({

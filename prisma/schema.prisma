@@ -61,6 +61,7 @@ model UserSettings {
   includeDefaultMusic            Boolean @default(true)
   addOverlay                     Boolean @default(true)
   includeCallToAction            Boolean @default(true)
+  projectEmailsEnabled           Boolean @default(true)
   autoApproveScript              Boolean @default(true)
   autoApproveAudio               Boolean @default(true)
   watermarkEnabled               Boolean @default(true)
