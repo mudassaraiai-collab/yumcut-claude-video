@@ -2,6 +2,6 @@
 
 👋 {{name}},
 
-I added {{bonus_tokens}} tokens to your balance.
+I added {{bonus_tokens}} tokens to your balance for your feedback.
 
 - Igor
