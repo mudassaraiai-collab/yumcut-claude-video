@@ -3,12 +3,19 @@ import { Badge } from '@/components/ui/badge';
 import { formatDateTimeAdmin } from '@/lib/date';
 import type { AdminTransactionListItem } from '@/server/admin/transactions';
 
+const PROJECT_TITLE_PREVIEW_MAX = 63;
+
 function transactionTypeLabel(type: string) {
   return type
     .toLowerCase()
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function truncatePreview(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
 type AdminTransactionCardProps = {
@@ -61,8 +68,9 @@ export function AdminTransactionCard({ transaction }: AdminTransactionCardProps)
             <Link
               href={`/admin/projects/${transaction.project.id}`}
               className="font-medium text-gray-700 underline decoration-gray-300 underline-offset-2 transition hover:text-gray-900 dark:text-gray-200 dark:decoration-gray-700 dark:hover:text-gray-100"
+              title={transaction.project.title}
             >
-              {transaction.project.title}
+              {truncatePreview(transaction.project.title, PROJECT_TITLE_PREVIEW_MAX)}
             </Link>
           </span>
         ) : null}
