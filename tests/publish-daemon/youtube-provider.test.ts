@@ -12,10 +12,10 @@ vi.mock('../../scripts/publish-daemon/logger', () => ({
 }));
 
 vi.mock('google-auth-library', () => ({
-  OAuth2Client: vi.fn().mockImplementation(() => ({
-    setCredentials: vi.fn(),
-    getAccessToken: vi.fn(async () => ({ token: 'access-token' })),
-  })),
+  OAuth2Client: class MockOAuth2Client {
+    setCredentials = vi.fn();
+    getAccessToken = vi.fn(async () => ({ token: 'access-token' }));
+  },
 }));
 
 import { scheduleYoutubeShort, cancelYoutubeShort } from '../../scripts/publish-daemon/providers/youtube';

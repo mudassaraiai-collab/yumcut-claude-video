@@ -6,7 +6,6 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['tests/setup-env.ts'],
     maxConcurrency: 5,
-    minWorkers: 6,
     maxWorkers: 6,
   },
   resolve: {
