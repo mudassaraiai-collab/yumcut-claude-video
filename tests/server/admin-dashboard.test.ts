@@ -13,6 +13,7 @@ const templateVoiceCount = vi.hoisted(() => vi.fn());
 const templateMusicCount = vi.hoisted(() => vi.fn());
 const templateCaptionsStyleCount = vi.hoisted(() => vi.fn());
 const templateOverlayCount = vi.hoisted(() => vi.fn());
+const tokenTransactionFindMany = vi.hoisted(() => vi.fn());
 
 vi.mock('@/server/db', () => ({
   prisma: {
@@ -45,6 +46,9 @@ vi.mock('@/server/db', () => ({
     },
     templateOverlay: {
       count: templateOverlayCount,
+    },
+    tokenTransaction: {
+      findMany: tokenTransactionFindMany,
     },
   },
 }));
@@ -102,6 +106,7 @@ function setupDefaultMockData() {
   templateMusicCount.mockResolvedValue(1);
   templateCaptionsStyleCount.mockResolvedValue(1);
   templateOverlayCount.mockResolvedValue(1);
+  tokenTransactionFindMany.mockResolvedValue([]);
 }
 
 describe('getAdminDashboardSnapshot user analytics filters', () => {
