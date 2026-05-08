@@ -36,8 +36,8 @@ describe('daemon + real APIs (health only)', () => {
     process.env.DAEMON_API_PASSWORD = password;
     // Provide DATABASE_URL early to avoid config warnings during route import
     process.env.DATABASE_URL = db.url;
-    app = await startAppApiServer({ daemonPassword: password, mediaRoot });
     storage = await startStorageApiServer({ daemonPassword: password, mediaRoot });
+    app = await startAppApiServer({ daemonPassword: password, mediaRoot, storagePublicUrl: storage.baseUrl });
     const envContent = buildDaemonEnvContent({
       apiBaseUrl: app.baseUrl,
       storageBaseUrl: storage.baseUrl,

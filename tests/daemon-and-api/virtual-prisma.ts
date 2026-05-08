@@ -96,6 +96,18 @@ type ProjectLanguageProgress = {
   updatedAt: Date;
 };
 
+type TokenTransaction = {
+  id: string;
+  userId: string;
+  delta: number;
+  balanceAfter: number;
+  type: string;
+  description: string | null;
+  initiator: string | null;
+  metadata: unknown;
+  createdAt: Date;
+};
+
 type TemplateVoice = {
   id: string;
   title: string;
@@ -130,6 +142,7 @@ export function makeVirtualPrisma() {
     userCharacterVariations: new Map<string, UserCharacterVariation>(),
     scriptRequests: new Map<string, ScriptRequest>(),
     users: new Map<string, { id: string; email: string; deleted: boolean; name: string | null; image: string | null; tokenBalance?: number }>(),
+    tokenTransactions: new Map<string, TokenTransaction>(),
     daemons: new Map<string, { id: string; lastSeenAt: Date; createdAt: Date; updatedAt: Date }>(),
     templateVoices: [
       {
@@ -1044,6 +1057,70 @@ export function makeVirtualPrisma() {
     },
   };
 
+  const tokenTransaction = {
+    async findMany({ where, select }: any = {}) {
+      let rows = Array.from(db.tokenTransactions.values());
+      if (typeof where?.userId === 'string') {
+        rows = rows.filter((row) => row.userId === where.userId);
+      } else if (Array.isArray(where?.userId?.in)) {
+        const accepted = new Set(where.userId.in as string[]);
+        rows = rows.filter((row) => accepted.has(row.userId));
+      }
+      if (typeof where?.type === 'string') {
+        rows = rows.filter((row) => row.type === where.type);
+      } else if (Array.isArray(where?.type?.in)) {
+        const accepted = new Set(where.type.in as string[]);
+        rows = rows.filter((row) => accepted.has(row.type));
+      }
+      if (!select) return rows;
+      return rows.map((row) => {
+        const out: any = {};
+        for (const key of Object.keys(select)) out[key] = (row as any)[key];
+        return out;
+      });
+    },
+    async create({ data }: any) {
+      const id = data.id || randomUUID();
+      const record: TokenTransaction = {
+        id,
+        userId: data.userId,
+        delta: Number(data.delta ?? 0),
+        balanceAfter: Number(data.balanceAfter ?? 0),
+        type: String(data.type ?? ''),
+        description: data.description ?? null,
+        initiator: data.initiator ?? null,
+        metadata: data.metadata ?? null,
+        createdAt: now(),
+      };
+      db.tokenTransactions.set(id, record);
+      return record;
+    },
+    async count({ where }: any = {}) {
+      const rows = await tokenTransaction.findMany({ where });
+      return rows.length;
+    },
+    async updateMany({ where, data }: any = {}) {
+      const rows = await tokenTransaction.findMany({ where });
+      let count = 0;
+      for (const row of rows) {
+        const existing = db.tokenTransactions.get(row.id);
+        if (!existing) continue;
+        Object.assign(existing, data || {});
+        db.tokenTransactions.set(existing.id, existing);
+        count += 1;
+      }
+      return { count };
+    },
+    async deleteMany({ where }: any = {}) {
+      const rows = await tokenTransaction.findMany({ where });
+      let count = 0;
+      for (const row of rows) {
+        if (db.tokenTransactions.delete(row.id)) count += 1;
+      }
+      return { count };
+    },
+  };
+
   const daemon = {
     async upsert({ where, create, update }: any) {
       const id = where.id;
@@ -1087,6 +1164,7 @@ export function makeVirtualPrisma() {
         userCharacter,
         userCharacterVariation,
         user,
+        tokenTransaction,
         templateVoice,
         scriptRequest,
         userSettings: {
@@ -1116,6 +1194,7 @@ export function makeVirtualPrisma() {
     userCharacter,
     userCharacterVariation,
     user,
+    tokenTransaction,
     templateVoice,
     $transaction,
     scriptRequest,
