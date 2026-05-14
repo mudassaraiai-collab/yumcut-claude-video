@@ -10,6 +10,7 @@ import { Tooltip } from '@/components/common/Tooltip';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ProjectStatus } from '@/shared/constants/status';
+import { CHARACTER_PIPELINE_ORDER, normalizeForPipelineOrdering } from '@/shared/pipeline/project-pipeline';
 import { useAppLanguage } from '@/components/providers/AppLanguageProvider';
 import { getLanguageFlag, getLanguageLabel, normalizeLanguageList, DEFAULT_LANGUAGE } from '@/shared/constants/languages';
 import { normalizeContentTone } from '@/shared/constants/content-tone';
@@ -39,11 +40,23 @@ function getVoiceProviderLabel(provider: string | null | undefined) {
   return (VOICE_PROVIDER_LABELS as Record<string, string>)[normalized] ?? provider?.trim() ?? null;
 }
 
+function getCharacterProjectProgressPercent(status: ProjectStatus) {
+  if (status === ProjectStatus.Done) return 100;
+  if (status === ProjectStatus.Error || status === ProjectStatus.Cancelled) return 100;
+
+  const normalized = normalizeForPipelineOrdering(status, 'character');
+  const index = normalized ? CHARACTER_PIPELINE_ORDER.indexOf(normalized) : -1;
+  if (index < 0) return 8;
+
+  return Math.round(((index + 1) / (CHARACTER_PIPELINE_ORDER.length + 1)) * 100);
+}
+
 export function CharacterProjectScreen({ project, primaryLanguage, finalVideoUrl }: CharacterProjectScreenProps) {
   const { language } = useAppLanguage();
   const t = getCharacterProjectCopy(language);
   const projectStatus = project.status as ProjectStatus;
   const isErrorStatus = projectStatus === ProjectStatus.Error;
+  const projectProgressPercent = getCharacterProjectProgressPercent(projectStatus);
   const rawErrorMessage =
     (project.statusInfo && typeof (project.statusInfo as any).message === 'string' && (project.statusInfo as any).message.trim().length > 0)
       ? (project.statusInfo as any).message.trim()
@@ -257,8 +270,17 @@ export function CharacterProjectScreen({ project, primaryLanguage, finalVideoUrl
                       <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300/85 bg-white/90 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
                         <Clapperboard className="h-4 w-4 text-gray-700 dark:text-gray-200" />
                       </div>
-                      <div className="mx-auto mb-2 h-1.5 w-28 overflow-hidden rounded-full border border-gray-300/70 bg-white/80 dark:border-gray-700/80 dark:bg-gray-800/85">
-                        <div className="h-full w-1/2 animate-[pulse_2.4s_ease-in-out_infinite] rounded-full bg-gray-600/90 dark:bg-gray-200/95" />
+                      <div
+                        className="mx-auto mb-2 h-1.5 w-28 overflow-hidden rounded-full border border-gray-300/70 bg-white/80 dark:border-gray-700/80 dark:bg-gray-800/85"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={projectProgressPercent}
+                      >
+                        <div
+                          className="h-full rounded-full bg-gray-600/90 transition-[width] duration-700 ease-out dark:bg-gray-200/95"
+                          style={{ width: `${projectProgressPercent}%` }}
+                        />
                       </div>
                       <Tooltip content={getCharacterProjectStatusDescription(projectStatus, language)} side="top" align="center">
                         {isErrorStatus ? (
