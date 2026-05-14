@@ -15,7 +15,7 @@ import {
 
 type RawCharacter = MainPageGroupCharacter;
 type RawGroup = MainPageGroup;
-type CatalogPreviewOverride = {
+export type CatalogPreviewOverride = {
   previewVideoUrl: string | null;
   previewVideoHasAudio: boolean;
 };
@@ -43,10 +43,32 @@ function normalizePublicImageUrl(input: string | null | undefined): string {
   return value.startsWith('/') ? value : `/${value}`;
 }
 
-function normalizePreviewVideoUrl(input: string | null | undefined): string | null {
+export function normalizePreviewVideoUrl(input: string | null | undefined): string | null {
   if (!input) return null;
-  const value = input.trim();
+  let value = input.trim();
+  if (/^https?:\/\//i.test(value) || value.startsWith('//')) return value;
+  if (value.startsWith('public/')) value = value.slice('public/'.length);
+  if (value && !value.startsWith('/')) value = `/${value}`;
   return value.length > 0 ? value : null;
+}
+
+export function resolveCatalogPreviewVideo(input: {
+  dbUrl?: string | null;
+  dbHasAudio?: boolean | null;
+  override?: CatalogPreviewOverride | null;
+}): CatalogPreviewOverride {
+  const dbPreviewVideoUrl = normalizePreviewVideoUrl(input.dbUrl);
+  if (dbPreviewVideoUrl) {
+    return {
+      previewVideoUrl: dbPreviewVideoUrl,
+      previewVideoHasAudio: input.dbHasAudio !== false,
+    };
+  }
+
+  return {
+    previewVideoUrl: input.override?.previewVideoUrl ?? null,
+    previewVideoHasAudio: input.override?.previewVideoHasAudio ?? input.dbHasAudio !== false,
+  };
 }
 
 function loadRawGroupsFromJson(): RawGroup[] {
@@ -357,6 +379,11 @@ export async function listCharacterCatalogGroups(
       const slug = character.slug?.trim();
       if (!slug) continue;
       const previewOverride = catalogPreviewOverrides.get(slug.toLowerCase());
+      const previewVideo = resolveCatalogPreviewVideo({
+        dbUrl: character.previewVideoUrl,
+        dbHasAudio: character.previewVideoHasAudio,
+        override: previewOverride,
+      });
       const itemMetrics = metrics.get(character.id);
       characters.push({
         id: character.id,
@@ -369,8 +396,8 @@ export async function listCharacterCatalogGroups(
           ru: character.searchTextRu ?? '',
         }),
         imageUrl: pickPrimaryVariationImagePath(character.variations),
-        videoUrl: previewOverride ? previewOverride.previewVideoUrl : normalizePreviewVideoUrl(character.previewVideoUrl),
-        videoHasAudio: character.previewVideoHasAudio !== false,
+        videoUrl: previewVideo.previewVideoUrl,
+        videoHasAudio: previewVideo.previewVideoHasAudio,
         defaultVoiceId: character.defaultVoiceId ?? null,
         defaultVoiceProvider: character.defaultVoiceProvider ?? null,
         creationsCount: itemMetrics?.creationsCount ?? 0,
@@ -459,6 +486,11 @@ export async function listMobileCharacterCatalog(
       const slug = character.slug?.trim();
       if (!slug) return [];
       const previewOverride = catalogPreviewOverrides.get(slug.toLowerCase());
+      const previewVideo = resolveCatalogPreviewVideo({
+        dbUrl: character.previewVideoUrl,
+        dbHasAudio: character.previewVideoHasAudio,
+        override: previewOverride,
+      });
       const itemMetrics = metrics.get(character.id);
       return [{
         id: character.id,
@@ -470,8 +502,8 @@ export async function listMobileCharacterCatalog(
           ru: character.searchTextRu ?? '',
         }),
         previewImageUrl: pickPrimaryVariationImagePath(character.variations),
-        previewVideoUrl: previewOverride ? previewOverride.previewVideoUrl : normalizePreviewVideoUrl(character.previewVideoUrl),
-        previewVideoHasAudio: character.previewVideoHasAudio !== false,
+        previewVideoUrl: previewVideo.previewVideoUrl,
+        previewVideoHasAudio: previewVideo.previewVideoHasAudio,
         defaultVoiceId: character.defaultVoiceId ?? null,
         defaultVoiceProvider: character.defaultVoiceProvider ?? null,
         creationsCount: itemMetrics?.creationsCount ?? 0,
@@ -541,6 +573,11 @@ export async function getCharacterCatalogProfileBySlug(
 
   const metrics = await getCharacterMetricsMap([character.id], options?.viewerUserId);
   const characterMetrics = metrics.get(character.id);
+  const previewVideo = resolveCatalogPreviewVideo({
+    dbUrl: character.previewVideoUrl,
+    dbHasAudio: character.previewVideoHasAudio,
+    override: catalogPreviewOverrides.get(character.slug.toLowerCase()),
+  });
 
   return {
     id: character.slug,
@@ -550,10 +587,8 @@ export async function getCharacterCatalogProfileBySlug(
     tagline: fallbackTagline,
     bio: character.bio?.trim() || character.description?.trim() || '',
     previewImageUrl: pickPrimaryVariationImagePath(character.variations),
-    previewVideoUrl: catalogPreviewOverrides.has(character.slug.toLowerCase())
-      ? (catalogPreviewOverrides.get(character.slug.toLowerCase())?.previewVideoUrl ?? null)
-      : normalizePreviewVideoUrl(character.previewVideoUrl),
-    previewVideoHasAudio: character.previewVideoHasAudio !== false,
+    previewVideoUrl: previewVideo.previewVideoUrl,
+    previewVideoHasAudio: previewVideo.previewVideoHasAudio,
     defaultVoiceId: character.defaultVoiceId ?? null,
     defaultVoiceProvider: character.defaultVoiceProvider ?? null,
     creationsCount: characterMetrics?.creationsCount ?? 0,

@@ -66,6 +66,12 @@ type CatalogRow = {
   previewVideoHasAudio: boolean;
 };
 
+type PendingCatalogVideo = {
+  file: File;
+  previewUrl: string;
+  previousUrl: string | null;
+};
+
 type PriorityCheckResult = {
   categoryId: string;
   normalizedSlugs: string[];
@@ -163,9 +169,11 @@ export function AdminCharactersManager() {
   const [categoryDraftTitle, setCategoryDraftTitle] = useState('');
   const [categoryEditId, setCategoryEditId] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
-  const [catalogRowPending, setCatalogRowPending] = useState<Record<string, 'save' | 'delete' | 'uploadVideo' | 'deleteVideo' | 'moveTop' | null>>({});
+  const [catalogRowPending, setCatalogRowPending] = useState<Record<string, 'save' | 'delete' | 'deleteVideo' | 'moveTop' | null>>({});
   const [catalogSlugErrors, setCatalogSlugErrors] = useState<Record<string, string | null>>({});
   const [catalogSlugChecking, setCatalogSlugChecking] = useState<Record<string, boolean>>({});
+  const [pendingCatalogVideos, setPendingCatalogVideos] = useState<Record<string, PendingCatalogVideo>>({});
+  const pendingCatalogVideosRef = useRef<Record<string, PendingCatalogVideo>>({});
   const [selectedImportKeys, setSelectedImportKeys] = useState<Record<string, boolean>>({});
   const [selectedCatalogKeys, setSelectedCatalogKeys] = useState<Record<string, boolean>>({});
   const [deleteCatalogWithFiles, setDeleteCatalogWithFiles] = useState(false);
@@ -260,6 +268,10 @@ export function AdminCharactersManager() {
     && !checkingPriorities
     && !applyingPriorities;
 
+  useEffect(() => {
+    pendingCatalogVideosRef.current = pendingCatalogVideos;
+  }, [pendingCatalogVideos]);
+
   async function loadCategories() {
     setLoadingCategories(true);
     try {
@@ -281,6 +293,12 @@ export function AdminCharactersManager() {
   async function loadCatalog(next?: { search?: string; categoryId?: string; page?: number; pageSize?: number }) {
     setLoadingCatalog(true);
     try {
+      setPendingCatalogVideos((prev) => {
+        for (const pending of Object.values(prev)) {
+          URL.revokeObjectURL(pending.previewUrl);
+        }
+        return {};
+      });
       const effectiveSearch = next?.search ?? search;
       const effectiveCategoryId = next?.categoryId ?? catalogCategoryId;
       const effectivePage = next?.page ?? catalogPage;
@@ -318,6 +336,14 @@ export function AdminCharactersManager() {
       setLoadingCatalog(false);
     }
   }
+
+  useEffect(() => {
+    return () => {
+      for (const pending of Object.values(pendingCatalogVideosRef.current)) {
+        URL.revokeObjectURL(pending.previewUrl);
+      }
+    };
+  }, []);
 
   async function loadImportValidationLimits() {
     setLoadingImportValidationLimits(true);
@@ -853,8 +879,10 @@ export function AdminCharactersManager() {
 
     setCatalogRowPending((prev) => ({ ...prev, [row.id]: 'save' }));
     try {
+      const pendingVideo = pendingCatalogVideos[row.id] ?? null;
+      const normalizedSlug = toSlug(row.slug);
       await Api.adminCharacterUpdate(row.id, {
-        slug: row.slug,
+        slug: normalizedSlug,
         name: row.name,
         title: row.title,
         bio: row.bio,
@@ -863,6 +891,24 @@ export function AdminCharactersManager() {
         categoryId: row.categoryId,
         previewVideoHasAudio: row.previewVideoHasAudio,
       });
+      if (pendingVideo) {
+        const response = await Api.adminCharacterUploadVideo(row.id, pendingVideo.file, {
+          hasAudio: row.previewVideoHasAudio,
+        });
+        URL.revokeObjectURL(pendingVideo.previewUrl);
+        setPendingCatalogVideos((prev) => {
+          const next = { ...prev };
+          delete next[row.id];
+          return next;
+        });
+        setCatalogRows((prev) => prev.map((item) => (item.id === row.id ? {
+          ...item,
+          slug: normalizedSlug,
+          previewVideoUrl: response.previewVideoUrl,
+        } : item)));
+      } else {
+        setCatalogRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, slug: normalizedSlug } : item)));
+      }
       toast.success('Character saved');
     } finally {
       setCatalogRowPending((prev) => ({ ...prev, [row.id]: null }));
@@ -993,20 +1039,35 @@ export function AdminCharactersManager() {
     }
   }
 
-  async function uploadCatalogRowVideo(row: CatalogRow, file: File) {
-    setCatalogRowPending((prev) => ({ ...prev, [row.id]: 'uploadVideo' }));
-    try {
-      const response = await Api.adminCharacterUploadVideo(row.id, file, {
-        hasAudio: row.previewVideoHasAudio,
-      });
-      setCatalogRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, previewVideoUrl: response.previewVideoUrl } : item)));
-      toast.success('Preview video uploaded');
-    } finally {
-      setCatalogRowPending((prev) => ({ ...prev, [row.id]: null }));
+  function previewCatalogRowVideo(row: CatalogRow, file: File) {
+    const previewUrl = URL.createObjectURL(file);
+    const previousPending = pendingCatalogVideos[row.id];
+    if (previousPending) {
+      URL.revokeObjectURL(previousPending.previewUrl);
     }
+    const previousUrl = previousPending ? previousPending.previousUrl : row.previewVideoUrl;
+    setPendingCatalogVideos((prev) => ({
+      ...prev,
+      [row.id]: { file, previewUrl, previousUrl },
+    }));
+    setCatalogRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, previewVideoUrl: previewUrl } : item)));
+    toast.success('Preview video selected. Click Save to upload it.');
   }
 
   async function deleteCatalogRowVideo(row: CatalogRow) {
+    const pendingVideo = pendingCatalogVideos[row.id] ?? null;
+    if (pendingVideo) {
+      URL.revokeObjectURL(pendingVideo.previewUrl);
+      setPendingCatalogVideos((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+      setCatalogRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, previewVideoUrl: pendingVideo.previousUrl } : item)));
+      toast.success('Pending preview video removed');
+      return;
+    }
+
     const confirmed = window.confirm(`Delete preview video for "${row.name}"?`);
     if (!confirmed) return;
 
@@ -1539,6 +1600,7 @@ export function AdminCharactersManager() {
                   ) : null}
                   {catalogRows.map((row) => {
                     const pendingAction = catalogRowPending[row.id] || null;
+                    const pendingVideo = pendingCatalogVideos[row.id] ?? null;
                     const rowBusy = pendingAction !== null;
                     const slugError = catalogSlugErrors[row.id] || null;
                     const slugChecking = catalogSlugChecking[row.id] === true;
@@ -1673,14 +1735,14 @@ export function AdminCharactersManager() {
                                     disabled={rowBusy}
                                     onChange={(event) => {
                                       const picked = event.target.files?.[0];
-                                      if (picked) void uploadCatalogRowVideo(row, picked);
+                                      if (picked) previewCatalogRowVideo(row, picked);
                                       event.currentTarget.value = '';
                                     }}
                                   />
                                   <Button asChild type="button" variant="outline" className="cursor-pointer" disabled={rowBusy}>
                                     <label htmlFor={`catalog-video-upload-${row.id}`} className="cursor-pointer">
-                                      {pendingAction === 'uploadVideo' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                                      {pendingAction === 'uploadVideo' ? 'Uploading video...' : 'Upload video'}
+                                      <Upload className="mr-2 h-4 w-4" />
+                                      {pendingVideo ? 'Choose different video' : 'Replace video'}
                                     </label>
                                   </Button>
                                   <Button
@@ -1691,9 +1753,14 @@ export function AdminCharactersManager() {
                                     onClick={() => void deleteCatalogRowVideo(row)}
                                   >
                                     {pendingAction === 'deleteVideo' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                                    {pendingAction === 'deleteVideo' ? 'Deleting video...' : 'Delete video'}
+                                    {pendingAction === 'deleteVideo' ? 'Deleting video...' : pendingVideo ? 'Remove pending video' : 'Delete video'}
                                   </Button>
                                 </div>
+                                {pendingVideo ? (
+                                  <div className="text-xs text-amber-600 dark:text-amber-400">
+                                    New preview selected. Click Save to upload and apply it.
+                                  </div>
+                                ) : null}
                               </div>
                             ) : (
                               <div className="text-xs text-muted-foreground">No preview video</div>
@@ -1708,14 +1775,14 @@ export function AdminCharactersManager() {
                                   disabled={rowBusy}
                                   onChange={(event) => {
                                     const picked = event.target.files?.[0];
-                                    if (picked) void uploadCatalogRowVideo(row, picked);
+                                    if (picked) previewCatalogRowVideo(row, picked);
                                     event.currentTarget.value = '';
                                   }}
                                 />
                                 <Button asChild type="button" variant="outline" className="cursor-pointer" disabled={rowBusy}>
                                   <label htmlFor={`catalog-video-upload-${row.id}`} className="cursor-pointer">
-                                    {pendingAction === 'uploadVideo' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                                    {pendingAction === 'uploadVideo' ? 'Uploading video...' : 'Upload video'}
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Choose video
                                   </label>
                                 </Button>
                               </div>
