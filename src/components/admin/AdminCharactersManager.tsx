@@ -1616,22 +1616,24 @@ export function AdminCharactersManager() {
                           Select
                         </label>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-[96px_96px_minmax(0,1fr)]">
-                        <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-800">
-                          {row.preparedImageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={row.preparedImageUrl} alt={row.name} className="h-[120px] w-full object-cover" />
-                          ) : (
-                            <div className="flex h-[120px] items-center justify-center text-xs text-muted-foreground">No image</div>
-                          )}
-                        </div>
-                        <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-800">
-                          {row.emptyImageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={row.emptyImageUrl} alt={`${row.name} empty`} className="h-[120px] w-full object-cover" />
-                          ) : (
-                            <div className="flex h-[120px] items-center justify-center text-xs text-muted-foreground">No empty</div>
-                          )}
+                      <div className="grid gap-3 md:grid-cols-[112px_minmax(0,1fr)]">
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-1">
+                          <div className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+                            {row.preparedImageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={row.preparedImageUrl} alt={row.name} className="h-24 w-full object-cover md:h-20" />
+                            ) : (
+                              <div className="flex h-24 items-center justify-center text-xs text-muted-foreground md:h-20">No image</div>
+                            )}
+                          </div>
+                          <div className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+                            {row.emptyImageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={row.emptyImageUrl} alt={`${row.name} empty`} className="h-24 w-full object-contain p-1 md:h-20" />
+                            ) : (
+                              <div className="flex h-24 items-center justify-center text-xs text-muted-foreground md:h-20">No empty</div>
+                            )}
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
