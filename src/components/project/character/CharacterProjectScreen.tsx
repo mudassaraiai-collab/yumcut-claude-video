@@ -262,18 +262,30 @@ export function CharacterProjectScreen({ project, primaryLanguage, finalVideoUrl
                           src={previewImageUrl}
                           alt={t.characterBackgroundAlt(displayName)}
                           fill
-                          className="pointer-events-none absolute inset-0 h-full w-full scale-105 object-cover opacity-90 blur-[2px]"
+                          sizes="(min-width: 1024px) 220px, 100vw"
+                          className="pointer-events-none absolute inset-0 z-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
                         />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/22 via-white/8 to-white/34 dark:from-gray-950/30 dark:via-gray-950/14 dark:to-gray-950/44" />
+                        <Image
+                          src={previewImageUrl}
+                          alt={t.characterBackgroundAlt(displayName)}
+                          fill
+                          sizes="(min-width: 1024px) 220px, 100vw"
+                          className="pointer-events-none absolute inset-0 z-[1] h-full w-full object-contain p-2"
+                        />
+                        <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-b from-white/8 via-transparent to-white/18 dark:from-gray-950/20 dark:via-transparent dark:to-gray-950/36" />
                       </>
                     ) : null}
-                    <div className="pointer-events-none absolute left-6 top-14 h-32 w-32 animate-[spin_14s_linear_infinite] rounded-full bg-cyan-300/35 blur-3xl dark:bg-cyan-500/25" />
-                    <div className="pointer-events-none absolute right-6 bottom-16 h-36 w-36 animate-[spin_18s_linear_infinite_reverse] rounded-full bg-blue-300/30 blur-3xl dark:bg-blue-500/25" />
-                    <div className="pointer-events-none absolute left-1/2 top-[54%] h-28 w-28 -translate-x-1/2 -translate-y-1/2 animate-[pulse_4s_ease-in-out_infinite] rounded-full bg-violet-300/25 blur-2xl dark:bg-violet-500/20" />
-                    <div className="pointer-events-none absolute left-8 bottom-10 h-24 w-24 animate-[pulse_5s_ease-in-out_infinite] rounded-full bg-fuchsia-300/25 blur-3xl dark:bg-fuchsia-500/18" />
-                    <div className="pointer-events-none absolute right-8 top-12 h-24 w-24 animate-[pulse_5.5s_ease-in-out_infinite] rounded-full bg-emerald-300/20 blur-3xl dark:bg-emerald-500/15" />
-                    <div className="pointer-events-none absolute left-1/3 top-8 h-20 w-20 animate-[pulse_4.6s_ease-in-out_infinite] rounded-full bg-amber-300/25 blur-3xl dark:bg-amber-500/18" />
-                    <div className="pointer-events-none absolute right-1/4 bottom-8 h-20 w-20 animate-[pulse_4.9s_ease-in-out_infinite] rounded-full bg-rose-300/25 blur-3xl dark:bg-rose-500/18" />
+                    {!previewImageUrl ? (
+                      <>
+                        <div className="pointer-events-none absolute left-6 top-14 h-32 w-32 animate-[spin_14s_linear_infinite] rounded-full bg-cyan-300/35 blur-3xl dark:bg-cyan-500/25" />
+                        <div className="pointer-events-none absolute right-6 bottom-16 h-36 w-36 animate-[spin_18s_linear_infinite_reverse] rounded-full bg-blue-300/30 blur-3xl dark:bg-blue-500/25" />
+                        <div className="pointer-events-none absolute left-1/2 top-[54%] h-28 w-28 -translate-x-1/2 -translate-y-1/2 animate-[pulse_4s_ease-in-out_infinite] rounded-full bg-violet-300/25 blur-2xl dark:bg-violet-500/20" />
+                        <div className="pointer-events-none absolute left-8 bottom-10 h-24 w-24 animate-[pulse_5s_ease-in-out_infinite] rounded-full bg-fuchsia-300/25 blur-3xl dark:bg-fuchsia-500/18" />
+                        <div className="pointer-events-none absolute right-8 top-12 h-24 w-24 animate-[pulse_5.5s_ease-in-out_infinite] rounded-full bg-emerald-300/20 blur-3xl dark:bg-emerald-500/15" />
+                        <div className="pointer-events-none absolute left-1/3 top-8 h-20 w-20 animate-[pulse_4.6s_ease-in-out_infinite] rounded-full bg-amber-300/25 blur-3xl dark:bg-amber-500/18" />
+                        <div className="pointer-events-none absolute right-1/4 bottom-8 h-20 w-20 animate-[pulse_4.9s_ease-in-out_infinite] rounded-full bg-rose-300/25 blur-3xl dark:bg-rose-500/18" />
+                      </>
+                    ) : null}
 
                     <div className="relative z-10 rounded-2xl border border-white/75 bg-white/65 px-3 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.16)] backdrop-blur-md dark:border-gray-700/70 dark:bg-gray-900/60">
                       <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300/85 bg-white/90 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
