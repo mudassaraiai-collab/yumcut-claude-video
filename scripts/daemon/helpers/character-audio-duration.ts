@@ -2,10 +2,11 @@ import { execFile } from 'node:child_process';
 import path from 'path';
 import { promisify } from 'node:util';
 import { log } from './logger';
+import { CHARACTER_PROJECT_TARGET_DURATION_SECONDS } from '@/shared/constants/character-project';
 
 const execFileAsync = promisify(execFile);
 
-export const CHARACTER_AUDIO_MAX_SECONDS = 20;
+export const CHARACTER_AUDIO_MAX_SECONDS = CHARACTER_PROJECT_TARGET_DURATION_SECONDS;
 export const CHARACTER_AUDIO_TARGET_SECONDS = 19.98;
 export const CHARACTER_AUDIO_SPEED_SAFETY_MULTIPLIER = 1.001;
 export const CHARACTER_AUDIO_MAX_CLAMP_ATTEMPTS = 3;

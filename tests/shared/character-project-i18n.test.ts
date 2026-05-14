@@ -8,6 +8,7 @@ import {
   getCharacterProjectToneMeta,
   getCharacterProjectVoiceTraitLabel,
 } from '@/components/project/character/i18n';
+import { resolveCharacterExpectedDurationSeconds } from '@/components/project/character/duration';
 
 describe('character project i18n', () => {
   it('returns localized status labels and descriptions for ru', () => {
@@ -24,6 +25,11 @@ describe('character project i18n', () => {
     expect(formatCharacterProjectDuration(45, 'en')).toBe('45s');
     expect(formatCharacterProjectDuration(45, 'ru')).toBe('45с');
     expect(formatCharacterProjectDuration(65, 'ru')).toBe('1:05');
+  });
+
+  it('uses 20s expected duration for idea mode and em dash for exact script mode', () => {
+    expect(formatCharacterProjectDuration(resolveCharacterExpectedDurationSeconds(false), 'en')).toBe('20s');
+    expect(formatCharacterProjectDuration(resolveCharacterExpectedDurationSeconds(true), 'en')).toBe('—');
   });
 
   it('returns localized tone metadata and core copy labels', () => {

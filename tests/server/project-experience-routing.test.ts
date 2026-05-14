@@ -117,7 +117,7 @@ describe('project experience routing payload', () => {
 describe('createProjectSchema projectExperience', () => {
   it('accepts story and character markers', () => {
     const story = createProjectSchema.safeParse({ prompt: 'Story prompt', durationSeconds: 30, projectExperience: 'story' });
-    const character = createProjectSchema.safeParse({ prompt: 'Character prompt', durationSeconds: 14, projectExperience: 'character' });
+    const character = createProjectSchema.safeParse({ prompt: 'Character prompt', durationSeconds: 20, projectExperience: 'character' });
 
     expect(story.success).toBe(true);
     expect(character.success).toBe(true);

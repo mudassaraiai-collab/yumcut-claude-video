@@ -25,6 +25,7 @@ import { normalizeProjectExperience } from '@/shared/constants/project-experienc
 import { normalizeContentTone } from '@/shared/constants/content-tone';
 import { defaultCharacterVideoGeneration } from '@/shared/constants/video-generation';
 import { CHARACTER_PROJECT_CREATION_TOKENS } from '@/shared/constants/subscriptions';
+import { CHARACTER_PROJECT_TARGET_DURATION_SECONDS } from '@/shared/constants/character-project';
 
 export const GET = withApiError(async function GET(req: NextRequest) {
   const auth = await authenticateApiRequest(req);
@@ -88,7 +89,7 @@ export const POST = withApiError(async function POST(req: NextRequest) {
   const normalizedProjectExperience = normalizeProjectExperience(projectExperience);
   const isCharacterExperience = normalizedProjectExperience === 'character';
   const requestedDurationSeconds = isCharacterExperience
-    ? 14
+    ? CHARACTER_PROJECT_TARGET_DURATION_SECONDS
     : (typeof durationSeconds === 'number' && durationSeconds > 0
       ? durationSeconds
       : TOKEN_COSTS.minimumProjectSeconds);

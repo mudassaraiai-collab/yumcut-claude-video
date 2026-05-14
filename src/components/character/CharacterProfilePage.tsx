@@ -27,6 +27,7 @@ import { normalizeLanguageVoiceMap } from '@/shared/voices/language-voice-map';
 import { voiceSupportsLanguage } from '@/shared/voices/client-utils';
 import type { LanguageVoiceMap } from '@/shared/types';
 import { normalizeCharacterCreationSettings } from '@/shared/constants/character-creation-settings';
+import { CHARACTER_PROJECT_TARGET_DURATION_SECONDS } from '@/shared/constants/character-project';
 import {
   isVoiceProviderExcludedFromRules,
   VOICE_PROVIDER_AVAILABILITY_RULES,
@@ -50,7 +51,6 @@ const CONTENT_TONE_OPTIONS: Array<{ value: ContentTone; emoji: string }> = [
   { value: 'playful', emoji: '😄' },
   { value: 'angry', emoji: '😡' },
 ];
-const CHARACTER_DEFAULT_DURATION_SECONDS = 14;
 
 type CharacterProfileCopy = {
   defaultBackLabel: string;
@@ -635,7 +635,7 @@ export function CharacterProfilePage({
       const characterSettings = normalizeCharacterCreationSettings(settings?.characterCreationSettings ?? null);
       const trimmedScriptText = scriptText.trim();
       const payload: Record<string, unknown> = {
-        durationSeconds: CHARACTER_DEFAULT_DURATION_SECONDS,
+        durationSeconds: CHARACTER_PROJECT_TARGET_DURATION_SECONDS,
         characterSlug: character.slug ?? character.id,
         projectExperience: 'character' as const,
         contentTone,

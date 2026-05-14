@@ -3,6 +3,7 @@ import { LIMITS } from '@/server/limits';
 import { LANGUAGE_CODES, LANGUAGE_ENUM } from '@/shared/constants/languages';
 import { PROJECT_EXPERIENCES } from '@/shared/constants/project-experience';
 import { CONTENT_TONES } from '@/shared/constants/content-tone';
+import { CHARACTER_PROJECT_TARGET_DURATION_SECONDS } from '@/shared/constants/character-project';
 const scriptTextSchema = z
   .string()
   .trim()
@@ -89,7 +90,7 @@ export const createProjectSchema = z.object({
 
   if (val.durationSeconds == null) return;
   const isCharacter = val.projectExperience === 'character';
-  const minimumDuration = isCharacter ? 14 : 30;
+  const minimumDuration = isCharacter ? CHARACTER_PROJECT_TARGET_DURATION_SECONDS : 30;
   if (val.durationSeconds < minimumDuration) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

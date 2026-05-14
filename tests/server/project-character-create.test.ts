@@ -149,7 +149,7 @@ describe('project creation from character slug', () => {
     expect(prismaMock.job.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         payload: expect.objectContaining({
-          durationSeconds: 14,
+          durationSeconds: 20,
           projectExperience: 'character',
           characterSlug: 'ada-mentor',
           contentTone: 'playful',
@@ -213,7 +213,7 @@ describe('project creation from character slug', () => {
           prompt: null,
           rawScript: 'Exact character line',
           useExactTextAsScript: true,
-          durationSeconds: 14,
+          durationSeconds: 20,
           projectExperience: 'character',
         }),
       }),

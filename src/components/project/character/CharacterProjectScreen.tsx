@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import {
   getCharacterProjectToneMeta,
   getCharacterProjectVoiceTraitLabel,
 } from './i18n';
+import { resolveCharacterExpectedDurationSeconds } from './duration';
 
 type CharacterProjectScreenProps = {
   project: ProjectDetailDTO;
@@ -103,7 +104,6 @@ export function CharacterProjectScreen({ project, primaryLanguage, finalVideoUrl
     || project.finalVoiceoverPath
     || (project.statusInfo && (((project.statusInfo as any).finalVoiceoverPath) || ((project.statusInfo as any).approvedAudioPath)) ? ((project.statusInfo as any).finalVoiceoverPath || (project.statusInfo as any).approvedAudioPath) as string : null)
     || null;
-  const [actualAudioDurationSeconds, setActualAudioDurationSeconds] = useState<number | null>(null);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [copiedGeneratedText, setCopiedGeneratedText] = useState(false);
@@ -129,39 +129,13 @@ export function CharacterProjectScreen({ project, primaryLanguage, finalVideoUrl
   const visibleLanguageVoiceRows = canToggleLanguages && !showAllLanguages
     ? languageVoiceRows.slice(0, maxVisibleLanguages)
     : languageVoiceRows;
-  const expectedDurationSeconds = creation.durationSeconds ?? null;
-  const audioDurationSeconds = actualAudioDurationSeconds ?? null;
+  const expectedDurationSeconds = resolveCharacterExpectedDurationSeconds(isScriptMode);
   const tokensUsed = typeof project.tokensUsed === 'number' && Number.isFinite(project.tokensUsed)
     ? Math.max(0, Math.round(project.tokensUsed))
     : null;
   const metadataTitleClass = 'inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400';
   const metadataValueClass = 'text-xl font-semibold text-gray-900 dark:text-gray-100';
   const hasRawVideo = Boolean(primaryVariant?.rawVideoUrl || primaryVariant?.rawVideoPath);
-
-  useEffect(() => {
-    let audio: HTMLAudioElement | null = null;
-    const source = generatedAudioUrl?.trim();
-    if (!source) {
-      setActualAudioDurationSeconds(null);
-      return;
-    }
-    audio = document.createElement('audio');
-    audio.preload = 'metadata';
-    audio.src = source;
-    const handleLoadedMetadata = () => {
-      if (!audio) return;
-      const raw = Number(audio.duration);
-      if (!Number.isFinite(raw) || raw <= 0) return;
-      setActualAudioDurationSeconds(Math.max(1, Math.round(raw)));
-    };
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    return () => {
-      if (!audio) return;
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.src = '';
-      audio = null;
-    };
-  }, [generatedAudioUrl]);
 
   const handleCopyPrompt = async () => {
     if (!text) return;
@@ -435,10 +409,7 @@ export function CharacterProjectScreen({ project, primaryLanguage, finalVideoUrl
                         {t.expectedDuration}
                       </div>
                       <div className={`mt-2 ${metadataValueClass}`}>
-                        {formatCharacterProjectDuration(
-                          hasFinalVideo ? (audioDurationSeconds ?? expectedDurationSeconds) : (expectedDurationSeconds ?? audioDurationSeconds),
-                          language,
-                        )}
+                        {formatCharacterProjectDuration(expectedDurationSeconds, language)}
                       </div>
                     </div>
                     <div>
