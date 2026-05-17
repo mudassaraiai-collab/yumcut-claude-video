@@ -3,8 +3,7 @@ import { getAuthSession } from '@/server/auth';
 import { ok, unauthorized } from '@/server/http';
 import { withApiError } from '@/server/errors';
 import { getTokenSummary } from '@/server/tokens';
-import { TOKEN_COSTS, MINIMUM_PROJECT_TOKENS } from '@/shared/constants/token-costs';
-import { CHARACTER_PROJECT_CREATION_TOKENS } from '@/shared/constants/subscriptions';
+import { CHARACTER_PROJECT_CREATION_TOKENS, MINIMUM_PROJECT_TOKENS, TOKEN_COSTS } from '@/shared/constants/token-costs';
 
 export const GET = withApiError(async function GET(_req: NextRequest) {
   const session = await getAuthSession();
@@ -17,6 +16,7 @@ export const GET = withApiError(async function GET(_req: NextRequest) {
     minimumProjectTokens: MINIMUM_PROJECT_TOKENS,
     minimumProjectSeconds: TOKEN_COSTS.minimumProjectSeconds,
     characterProjectTokens: CHARACTER_PROJECT_CREATION_TOKENS,
+    characterProjectTokenCosts: TOKEN_COSTS.characterProjects,
     actionCosts: TOKEN_COSTS.actions,
     signUpBonus: TOKEN_COSTS.signUpBonus,
   });

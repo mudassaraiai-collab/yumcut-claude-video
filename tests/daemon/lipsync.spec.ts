@@ -21,6 +21,7 @@ describe('runLipsyncRunware', () => {
   let imagePath: string;
   let audioPath: string;
   let runLipsyncRunware: typeof import('../../scripts/daemon/helpers/lipsync').runLipsyncRunware;
+  let runLipsyncRunpod: typeof import('../../scripts/daemon/helpers/lipsync').runLipsyncRunpod;
 
   beforeEach(async () => {
     baseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'daemon-lipsync-'));
@@ -33,7 +34,7 @@ describe('runLipsyncRunware', () => {
     await fs.writeFile(audioPath, 'audio', 'utf8');
     runNpmCommandMock.mockReset();
     vi.resetModules();
-    ({ runLipsyncRunware } = await import('../../scripts/daemon/helpers/lipsync'));
+    ({ runLipsyncRunware, runLipsyncRunpod } = await import('../../scripts/daemon/helpers/lipsync'));
   });
 
   afterEach(async () => {
@@ -132,5 +133,43 @@ describe('runLipsyncRunware', () => {
       imagePath,
       prompt: 'emotion: neutral',
     })).rejects.toThrow('did not produce an output video');
+  });
+
+  it('runs runpod CLI with an explicit output file', async () => {
+    runNpmCommandMock.mockImplementationOnce(async ({ logDir: runLogDir, args }: any) => {
+      await fs.mkdir(runLogDir, { recursive: true });
+      const logPath = path.join(runLogDir, 'lipsync-runpod.log');
+      await fs.writeFile(logPath, 'ok', 'utf8');
+      const outputPath = args[args.indexOf('--output') + 1];
+      await fs.mkdir(path.dirname(outputPath), { recursive: true });
+      await fs.writeFile(outputPath, 'video', 'utf8');
+      return { logPath, displayCommand: 'npm run -s lipsync:runpod -- ...' };
+    });
+
+    const result = await runLipsyncRunpod({
+      projectId: 'p5',
+      charactersWorkspace,
+      commandsWorkspaceRoot: baseDir,
+      logDir,
+      audioPath,
+      imagePath,
+    });
+
+    expect(runNpmCommandMock).toHaveBeenCalledTimes(1);
+    const args: string[] = runNpmCommandMock.mock.calls[0][0].args;
+    expect(args).toEqual([
+      'run',
+      '-s',
+      'lipsync:runpod',
+      '--',
+      '--image',
+      path.resolve(imagePath),
+      '--audio',
+      path.resolve(audioPath),
+      '--output',
+      expect.stringContaining(path.join('tmp', 'lipsync-runpod', 'lipsync-')),
+    ]);
+    await expect(fs.access(result.outputPath)).resolves.toBeUndefined();
+    expect(result.command).toBe('npm run -s lipsync:runpod -- ...');
   });
 });

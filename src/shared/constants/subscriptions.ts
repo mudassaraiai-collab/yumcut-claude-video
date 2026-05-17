@@ -1,3 +1,5 @@
+import { CHARACTER_PROJECT_CREATION_TOKENS as HIGH_QUALITY_CHARACTER_PROJECT_CREATION_TOKENS } from './token-costs';
+
 export type SubscriptionPlanKey = 'weekly' | 'monthly' | 'monthly_pro';
 export type SubscriptionInterval = 'week' | 'month';
 
@@ -43,7 +45,7 @@ export type LegacyStripePriceTokenMapping = {
   productId: string;
 };
 
-export const CHARACTER_PROJECT_CREATION_TOKENS = 75;
+export const CHARACTER_PROJECT_CREATION_TOKENS = HIGH_QUALITY_CHARACTER_PROJECT_CREATION_TOKENS;
 
 export const SUBSCRIPTION_ACTIVE_PLANS: Record<SubscriptionPlanKey, SubscriptionPlanDefinition> = {
   weekly: {

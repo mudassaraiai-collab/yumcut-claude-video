@@ -19,12 +19,28 @@ type RunLipsyncRunwareResult = {
   outputPath: string;
 };
 
+type RunLipsyncRunpodOptions = {
+  projectId: string;
+  charactersWorkspace: string;
+  commandsWorkspaceRoot?: string | null;
+  logDir: string;
+  audioPath: string;
+  imagePath: string;
+};
+
+type RunLipsyncRunpodResult = {
+  logPath: string;
+  command: string;
+  outputPath: string;
+};
+
 type VideoFileInfo = {
   path: string;
   mtimeMs: number;
 };
 
-const DEFAULT_OUTPUT_DIR = path.join('tmp', 'lipsync-runware');
+const DEFAULT_RUNWARE_OUTPUT_DIR = path.join('tmp', 'lipsync-runware');
+const DEFAULT_RUNPOD_OUTPUT_DIR = path.join('tmp', 'lipsync-runpod');
 const FAKE_OUTPUT_BYTES = Buffer.from('DUMMY_LIPSYNC_VIDEO');
 
 function useFakeVideoCli() {
@@ -100,7 +116,7 @@ export async function runLipsyncRunware(options: RunLipsyncRunwareOptions): Prom
   await assertFileExists(resolvedAudioPath, 'lipsync audio');
   await assertFileExists(resolvedImagePath, 'lipsync character image');
 
-  const outputDir = path.join(charactersWorkspace, DEFAULT_OUTPUT_DIR);
+  const outputDir = path.join(charactersWorkspace, DEFAULT_RUNWARE_OUTPUT_DIR);
   const before = await collectOutputVideos(outputDir);
   const startedAtMs = Date.now();
 
@@ -134,6 +150,62 @@ export async function runLipsyncRunware(options: RunLipsyncRunwareOptions): Prom
   }
 
   await assertFileExists(outputPath, 'lipsync output');
+  return {
+    logPath: run.logPath,
+    command: run.displayCommand,
+    outputPath,
+  };
+}
+
+export async function runLipsyncRunpod(options: RunLipsyncRunpodOptions): Promise<RunLipsyncRunpodResult> {
+  const {
+    projectId,
+    charactersWorkspace,
+    commandsWorkspaceRoot,
+    logDir,
+    audioPath,
+    imagePath,
+  } = options;
+
+  const resolvedAudioPath = path.resolve(audioPath);
+  const resolvedImagePath = path.resolve(imagePath);
+  await assertFileExists(resolvedAudioPath, 'runpod lipsync audio');
+  await assertFileExists(resolvedImagePath, 'runpod lipsync character image');
+
+  const outputDir = path.join(charactersWorkspace, DEFAULT_RUNPOD_OUTPUT_DIR);
+  await fs.mkdir(outputDir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[.:]/g, '-');
+  let outputPath = path.join(outputDir, `lipsync-${stamp}.mp4`);
+
+  const run = await runNpmCommand({
+    projectId,
+    cwd: charactersWorkspace,
+    workspaceRoot: commandsWorkspaceRoot ?? null,
+    args: [
+      'run',
+      '-s',
+      'lipsync:runpod',
+      '--',
+      '--image',
+      resolvedImagePath,
+      '--audio',
+      resolvedAudioPath,
+      '--output',
+      outputPath,
+    ],
+    logDir,
+    logName: 'lipsync-runpod',
+  });
+
+  if (useFakeVideoCli()) {
+    try {
+      await assertFileExists(outputPath, 'runpod lipsync output');
+    } catch {
+      outputPath = await ensureFakeOutput(outputDir);
+    }
+  }
+
+  await assertFileExists(outputPath, 'runpod lipsync output');
   return {
     logPath: run.logPath,
     command: run.displayCommand,

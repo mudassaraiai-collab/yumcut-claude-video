@@ -16,7 +16,8 @@ import { ensureProjectScaffold, ensureLanguageWorkspace, ensureLanguageLogDir, e
 import { isCustomTemplateData } from '@/shared/templates/custom-data';
 import { refreshTemplateImagesFromStorage } from '../template-images';
 import { resolveCharacterImagePath } from '../character-cache';
-import { runLipsyncRunware } from '../lipsync';
+import { runLipsyncRunpod, runLipsyncRunware } from '../lipsync';
+import type { CharacterVideoGenerationMode } from '@/shared/constants/character-video-quality';
 
 type VideoPartsPhaseArgs = {
   projectId: string;
@@ -134,7 +135,7 @@ export async function handleVideoPartsPhase({ projectId, cfg, jobPayload, daemon
     })();
     const transcriptionSnapshot = await getTranscriptionSnapshot(projectId);
     const audioLocalPaths = (jobPayload as any)?.audioLocalPaths as Record<string, string | null> | undefined;
-    const characterImagePath = videoGeneration.mode === 'lipsync_runware'
+    const characterImagePath = videoGeneration.mode
       ? await resolveVideoCharacterImagePath({
           projectId,
           absoluteImagePath: cfg.characterSelection?.absoluteImagePath ?? null,
@@ -177,7 +178,7 @@ export async function handleVideoPartsPhase({ projectId, cfg, jobPayload, daemon
         lastAttemptCommand = null;
 
         let partsResult: { logPath: string | null; command: string | null; mainVideoPath: string };
-        if (videoGeneration.mode === 'lipsync_runware') {
+        if (videoGeneration.mode) {
           const voiceover = transcriptionSnapshot.finalVoiceovers?.[languageCode] ?? null;
           let audioLocalPath = audioLocalPaths?.[languageCode] ?? voiceover?.localPath ?? null;
           if (!audioLocalPath && languageCode === primaryLanguage) {
@@ -186,15 +187,24 @@ export async function handleVideoPartsPhase({ projectId, cfg, jobPayload, daemon
           if (!audioLocalPath) {
             throw new Error(`Voiceover audio not available locally for language ${languageCode}`);
           }
-          const lipsyncResult = await runLipsyncRunware({
-            projectId,
-            charactersWorkspace: daemonConfig.charactersWorkspace,
-            commandsWorkspaceRoot: agentWorkspace,
-            logDir,
-            audioPath: audioLocalPath,
-            imagePath: characterImagePath!,
-            prompt: videoGeneration.lipsyncPrompt,
-          });
+          const lipsyncResult = videoGeneration.mode === 'lipsync_runware'
+            ? await runLipsyncRunware({
+                projectId,
+                charactersWorkspace: daemonConfig.charactersWorkspace,
+                commandsWorkspaceRoot: agentWorkspace,
+                logDir,
+                audioPath: audioLocalPath,
+                imagePath: characterImagePath!,
+                prompt: videoGeneration.lipsyncPrompt,
+              })
+            : await runLipsyncRunpod({
+                projectId,
+                charactersWorkspace: daemonConfig.charactersWorkspace,
+                commandsWorkspaceRoot: agentWorkspace,
+                logDir,
+                audioPath: audioLocalPath,
+                imagePath: characterImagePath!,
+              });
           const mainVideoPath = path.join(workspaceRoot, 'video-basic-effects', 'final', 'simple.1080p.mp4');
           await fs.mkdir(path.dirname(mainVideoPath), { recursive: true });
           await fs.copyFile(lipsyncResult.outputPath, mainVideoPath);
@@ -289,7 +299,7 @@ export async function handleVideoPartsPhase({ projectId, cfg, jobPayload, daemon
     }
   } catch (err: any) {
     const isDummyWorkspace = isDummyScriptWorkspace(daemonConfig.scriptWorkspaceV2);
-    if (isDummyWorkspace && videoGenerationMode !== 'lipsync_runware') {
+    if (isDummyWorkspace && !videoGenerationMode) {
       const fallbackLanguages = projectLanguages.length > 0 ? projectLanguages : resolveProjectLanguagesFromSnapshot(cfg);
       const primaryLanguage = fallbackLanguages[0] ?? DEFAULT_LANGUAGE;
       const fallbackEffect = determineEffectName(projectId, cfg.template ?? null);
@@ -393,7 +403,7 @@ async function pickMetadataPath(params: {
 }
 
 function resolveVideoGenerationConfig(cfg: CreationSnapshot, jobPayload: Record<string, unknown>): {
-  mode: 'lipsync_runware' | null;
+  mode: CharacterVideoGenerationMode | null;
   lipsyncPrompt: string;
 } {
   const snapshotConfig = (cfg as any)?.videoGeneration as Record<string, unknown> | null | undefined;
@@ -405,8 +415,11 @@ function resolveVideoGenerationConfig(cfg: CreationSnapshot, jobPayload: Record<
       ? snapshotConfig.lipsyncPrompt
       : '';
 
-  if (mode !== 'lipsync_runware') {
+  if (!mode) {
     return { mode: null, lipsyncPrompt: '' };
+  }
+  if (mode === 'lipsync_runpod') {
+    return { mode, lipsyncPrompt: '' };
   }
   const basePrompt = promptValue.trim();
   if (!basePrompt) {
@@ -448,9 +461,12 @@ function loadVideoTonePrompts() {
   return cachedVideoTonePrompts;
 }
 
-function normalizeMode(value: unknown): 'lipsync_runware' | null {
+function normalizeMode(value: unknown): CharacterVideoGenerationMode | null {
   if (typeof value !== 'string') return null;
-  return value.trim().toLowerCase() === 'lipsync_runware' ? 'lipsync_runware' : null;
+  const normalized = value.trim().toLowerCase();
+  return normalized === 'lipsync_runware' || normalized === 'lipsync_runpod'
+    ? normalized
+    : null;
 }
 
 async function resolveVideoCharacterImagePath(params: {
@@ -470,7 +486,7 @@ async function resolveVideoCharacterImagePath(params: {
 
   const resolved = await resolveCharacterImagePath({ projectId, imageUrl });
   if (!resolved) {
-    throw new Error('Character image is required for lipsync_runware mode');
+    throw new Error('Character image is required for lipsync mode');
   }
   return resolved;
 }

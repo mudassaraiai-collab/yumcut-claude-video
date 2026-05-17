@@ -5,6 +5,7 @@ import type { TargetLanguageCode } from '@/shared/constants/languages';
 import type { ProjectExperience } from '@/shared/constants/project-experience';
 import type { ContentTone } from '@/shared/constants/content-tone';
 import type { CharacterCreationSettings } from '@/shared/constants/character-creation-settings';
+import type { CharacterVideoGenerationMode, CharacterVideoQuality } from '@/shared/constants/character-video-quality';
 
 export type LanguageVoiceMap = Partial<Record<TargetLanguageCode, string | null>>;
 
@@ -275,8 +276,9 @@ export interface ProjectDetailDTO {
     targetLanguage?: string | null;
     languages?: string[];
     languageVoiceAssignments?: LanguageVoiceMap;
+    characterVideoQuality?: CharacterVideoQuality;
     videoGeneration?: {
-      mode: 'lipsync_runware';
+      mode: CharacterVideoGenerationMode;
       lipsyncPrompt?: string | null;
     } | null;
     projectExperience?: ProjectExperience;
@@ -324,6 +326,7 @@ export interface TokenSummaryDTO {
   minimumProjectTokens: number;
   minimumProjectSeconds: number;
   characterProjectTokens: number;
+  characterProjectTokenCosts: typeof TOKEN_COSTS.characterProjects;
   actionCosts: typeof TOKEN_COSTS.actions;
   signUpBonus: number;
 }
@@ -441,8 +444,9 @@ export interface PendingProjectDraft {
     voiceId?: string | null;
     languages?: string[];
     languageVoices?: LanguageVoiceMap;
+    characterVideoQuality?: CharacterVideoQuality;
     videoGeneration?: {
-      mode?: 'lipsync_runware';
+      mode?: CharacterVideoGenerationMode;
       lipsyncPrompt?: string;
     };
     projectExperience?: ProjectExperience;

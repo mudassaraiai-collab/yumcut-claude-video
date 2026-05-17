@@ -36,3 +36,8 @@ export const GET = withApiError(async function GET(req: NextRequest) {
 
   return ok(payload);
 }, 'Failed to load mobile projects');
+
+export async function POST(req: NextRequest) {
+  const { POST: createProject } = await import('../../projects/route');
+  return createProject(req);
+}

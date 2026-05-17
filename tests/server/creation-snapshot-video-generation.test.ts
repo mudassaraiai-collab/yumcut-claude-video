@@ -80,6 +80,28 @@ describe('daemon creation snapshot videoGeneration fallback', () => {
     expect(body.videoGeneration).toBeNull();
   });
 
+  it('preserves low-quality runpod character video config', async () => {
+    prismaMock.job.findFirst.mockResolvedValue({
+      payload: {
+        projectExperience: 'character',
+        targetLanguage: 'en',
+        languages: ['en'],
+        characterVideoQuality: 'low',
+        videoGeneration: { mode: 'lipsync_runpod' },
+      },
+    });
+    const route = await import('@/app/api/daemon/projects/[projectId]/creation-snapshot/route');
+
+    const res = await route.GET(new NextRequest('http://localhost/api/daemon/projects/project-1/creation-snapshot'), {
+      params: Promise.resolve({ projectId: 'project-1' }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.characterVideoQuality).toBe('low');
+    expect(body.videoGeneration).toEqual({ mode: 'lipsync_runpod' });
+  });
+
   it('passes character creation settings flags to daemon snapshot', async () => {
     prismaMock.job.findFirst.mockResolvedValue({
       payload: {

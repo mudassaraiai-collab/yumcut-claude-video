@@ -13,6 +13,12 @@ import { buildVoiceProviderSet, FALLBACK_VOICE_PROVIDER_IDS } from '@/shared/con
 import { normalizeContentTone } from '@/shared/constants/content-tone';
 import { normalizeProjectExperience } from '@/shared/constants/project-experience';
 import { defaultCharacterVideoGeneration } from '@/shared/constants/video-generation';
+import {
+  CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE,
+  normalizeCharacterVideoGenerationMode,
+  normalizeCharacterVideoQuality,
+  qualityForVideoGenerationMode,
+} from '@/shared/constants/character-video-quality';
 
 type Params = { projectId: string };
 
@@ -151,18 +157,26 @@ export const GET = withApiError(async function GET(req: NextRequest, { params }:
     ? defaultCharacterVideoGeneration()
     : null;
   const payloadVideoGeneration = payload?.videoGeneration as Record<string, unknown> | undefined;
-  const videoGenerationMode = typeof payloadVideoGeneration?.mode === 'string'
-    ? payloadVideoGeneration.mode.trim().toLowerCase()
-    : '';
+  const videoGenerationMode = normalizeCharacterVideoGenerationMode(payloadVideoGeneration?.mode);
+  const characterVideoQuality = projectExperience === 'character'
+    ? (videoGenerationMode
+      ? qualityForVideoGenerationMode(videoGenerationMode)
+      : normalizeCharacterVideoQuality(payload.characterVideoQuality))
+    : undefined;
   const videoGenerationPrompt = typeof payloadVideoGeneration?.lipsyncPrompt === 'string'
     ? payloadVideoGeneration.lipsyncPrompt.trim()
     : '';
-  const videoGeneration = videoGenerationMode === 'lipsync_runware'
+  const resolvedVideoGenerationMode = projectExperience === 'character'
+    ? (videoGenerationMode ?? CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE[characterVideoQuality ?? 'high'])
+    : null;
+  const videoGeneration = resolvedVideoGenerationMode
     ? {
-        mode: 'lipsync_runware' as const,
-        lipsyncPrompt: videoGenerationPrompt || defaultVideoGeneration?.lipsyncPrompt || null,
+        mode: resolvedVideoGenerationMode,
+        ...(resolvedVideoGenerationMode === 'lipsync_runware'
+          ? { lipsyncPrompt: videoGenerationPrompt || defaultVideoGeneration?.lipsyncPrompt || null }
+          : {}),
       }
-    : defaultVideoGeneration;
+    : null;
   // Resolve voice id (global list)
   const voiceId = project.voiceId || (typeof payload.voiceId === 'string' ? payload.voiceId : null);
   const targetLanguage = typeof payload.targetLanguage === 'string' ? payload.targetLanguage : 'en';
@@ -248,6 +262,7 @@ const voiceQueryWhere = candidateVoiceIds.length > 0
     durationSeconds: typeof payload.durationSeconds === 'number' ? payload.durationSeconds : null,
     targetLanguage,
     languages,
+    characterVideoQuality,
     scriptCreationGuidanceEnabled: scriptCreationEnabled,
     scriptCreationGuidance: scriptCreationEnabled ? scriptCreationGuidance : '',
     scriptAvoidanceGuidanceEnabled: scriptAvoidanceEnabled,

@@ -17,6 +17,12 @@ import { normalizeProjectExperience } from '@/shared/constants/project-experienc
 import { normalizeContentTone } from '@/shared/constants/content-tone';
 import { defaultCharacterVideoGeneration } from '@/shared/constants/video-generation';
 import { calculateProjectTokenCost, TOKEN_TRANSACTION_TYPES } from '@/shared/constants/token-costs';
+import {
+  CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE,
+  normalizeCharacterVideoGenerationMode,
+  normalizeCharacterVideoQuality,
+  qualityForVideoGenerationMode,
+} from '@/shared/constants/character-video-quality';
 
 type Params = { projectId: string };
 
@@ -318,6 +324,27 @@ export const GET = withApiError(async function GET(req: NextRequest, { params }:
       };
     }
     const payloadVideoGeneration = (initialJob?.payload as any)?.videoGeneration;
+    const payloadVideoGenerationMode = normalizeCharacterVideoGenerationMode(payloadVideoGeneration?.mode);
+    const characterVideoQuality = projectExperience === 'character'
+      ? (payloadVideoGenerationMode
+        ? qualityForVideoGenerationMode(payloadVideoGenerationMode)
+        : normalizeCharacterVideoQuality((initialJob?.payload as any)?.characterVideoQuality))
+      : undefined;
+    const resolvedVideoGenerationMode = projectExperience === 'character'
+      ? (payloadVideoGenerationMode ?? CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE[characterVideoQuality ?? 'high'])
+      : null;
+    const resolvedVideoGeneration = resolvedVideoGenerationMode
+      ? {
+          mode: resolvedVideoGenerationMode,
+          ...(resolvedVideoGenerationMode === 'lipsync_runware'
+            ? {
+                lipsyncPrompt: typeof payloadVideoGeneration?.lipsyncPrompt === 'string' && payloadVideoGeneration.lipsyncPrompt.trim()
+                  ? payloadVideoGeneration.lipsyncPrompt.trim()
+                  : defaultCharacterVideoGeneration().lipsyncPrompt,
+              }
+            : {}),
+        }
+      : null;
     const creation: any = initialJob?.payload ? {
       durationSeconds: (initialJob.payload as any).durationSeconds ?? null,
       useExactTextAsScript: (initialJob.payload as any).useExactTextAsScript ?? null,
@@ -343,7 +370,8 @@ export const GET = withApiError(async function GET(req: NextRequest, { params }:
         ?? (p as any)?.languageVoiceAssignments
         ?? null,
       ),
-      videoGeneration: payloadVideoGeneration ?? (projectExperience === 'character' ? defaultCharacterVideoGeneration() : null),
+      characterVideoQuality,
+      videoGeneration: resolvedVideoGeneration,
       projectExperience,
       contentTone: normalizeContentTone((initialJob.payload as any)?.contentTone ?? (p as any)?.contentTone),
       characterSelection: characterSelectionPayload ? withCharacterSelectionLabels(characterSelectionPayload) : null,

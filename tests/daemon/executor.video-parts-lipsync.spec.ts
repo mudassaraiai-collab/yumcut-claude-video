@@ -61,6 +61,12 @@ const runLipsyncRunware = vi.fn(async () => ({
   outputPath: '/tmp/lipsync.mp4',
 }));
 
+const runLipsyncRunpod = vi.fn(async () => ({
+  logPath: '/tmp/lipsync-runpod.log',
+  command: 'npm run -s lipsync:runpod -- ...',
+  outputPath: '/tmp/lipsync-runpod.mp4',
+}));
+
 const renderVideoParts = vi.fn(async () => ({
   logPath: '/tmp/legacy.log',
   command: 'npm run -s video:basic-effects -- ...',
@@ -78,6 +84,7 @@ vi.mock('../../scripts/daemon/helpers/db', () => ({
 
 vi.mock('../../scripts/daemon/helpers/lipsync', () => ({
   runLipsyncRunware,
+  runLipsyncRunpod,
 }));
 
 vi.mock('../../scripts/daemon/helpers/video', () => ({
@@ -131,6 +138,7 @@ describe('video parts lipsync mode', () => {
     updateLanguageProgress.mockClear();
     markLanguageFailure.mockClear();
     runLipsyncRunware.mockClear();
+    runLipsyncRunpod.mockClear();
     renderVideoParts.mockClear();
     getTranscriptionSnapshot.mockReset();
     getCreationSnapshot.mockReset();
@@ -293,6 +301,82 @@ describe('video parts lipsync mode', () => {
       'Video parts rendering failed',
       expect.any(Object),
     );
+  });
+
+  it('uses lipsync runpod for low-quality video parts without requiring a prompt', async () => {
+    const projectId = 'project_lipsync_runpod';
+    const languageWorkspace = path.join(tmpRoot, projectId, 'workspace', 'en');
+    const metadataPath = path.join(languageWorkspace, 'metadata', 'transcript-blocks.json');
+    const audioPath = path.join(tmpRoot, 'audio-en.wav');
+    const imagePath = path.join(tmpRoot, 'character.png');
+    const lipsyncOutputPath = path.join(tmpRoot, 'lipsync-runpod-out.mp4');
+    await fs.mkdir(path.dirname(metadataPath), { recursive: true });
+    await fs.writeFile(metadataPath, JSON.stringify({ blocks: [{ id: 'b1' }] }), 'utf8');
+    await fs.writeFile(audioPath, 'audio', 'utf8');
+    await fs.writeFile(imagePath, 'image', 'utf8');
+    await fs.writeFile(lipsyncOutputPath, 'video', 'utf8');
+
+    getCreationSnapshot.mockResolvedValue({
+      autoApproveScript: true,
+      autoApproveAudio: true,
+      includeDefaultMusic: true,
+      addOverlay: true,
+      includeCallToAction: true,
+      useExactTextAsScript: false,
+      durationSeconds: 30,
+      targetLanguage: 'en',
+      languages: ['en'],
+      watermarkEnabled: true,
+      captionsEnabled: true,
+      scriptCreationGuidanceEnabled: false,
+      scriptCreationGuidance: '',
+      scriptAvoidanceGuidanceEnabled: false,
+      scriptAvoidanceGuidance: '',
+      audioStyleGuidanceEnabled: false,
+      audioStyleGuidance: '',
+      contentTone: 'neutral',
+      characterVideoQuality: 'low',
+      videoGeneration: {
+        mode: 'lipsync_runpod',
+      },
+      characterSelection: {
+        type: 'global',
+        absoluteImagePath: imagePath,
+        imageUrl: null,
+      },
+      template: null,
+    });
+    getTranscriptionSnapshot.mockResolvedValue({
+      finalVoiceoverId: 'audio_1',
+      localPath: audioPath,
+      storagePath: '/audio/en.wav',
+      publicUrl: 'https://example.com/audio/en.wav',
+      finalVoiceovers: {
+        en: {
+          id: 'audio_1',
+          path: '/audio/en.wav',
+          publicUrl: 'https://example.com/audio/en.wav',
+          localPath: audioPath,
+        },
+      },
+    });
+    runLipsyncRunpod.mockResolvedValue({
+      logPath: path.join(tmpRoot, 'lipsync-runpod.log'),
+      command: 'npm run -s lipsync:runpod -- ...',
+      outputPath: lipsyncOutputPath,
+    });
+
+    await executeForProject(projectId, ProjectStatus.ProcessVideoPartsGeneration, {});
+
+    expect(runLipsyncRunpod).toHaveBeenCalledTimes(1);
+    expect(runLipsyncRunpod).toHaveBeenCalledWith(expect.objectContaining({
+      audioPath,
+      imagePath,
+    }));
+    expect(runLipsyncRunware).not.toHaveBeenCalled();
+    expect(renderVideoParts).not.toHaveBeenCalled();
+    const mainVideoPath = path.join(languageWorkspace, 'video-basic-effects', 'final', 'simple.1080p.mp4');
+    await expect(fs.access(mainVideoPath)).resolves.toBeUndefined();
   });
 
   it('injects angry tone into runware prompt for lipsync mode', async () => {

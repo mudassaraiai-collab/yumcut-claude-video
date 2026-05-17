@@ -151,6 +151,7 @@ describe('project creation from character slug', () => {
         payload: expect.objectContaining({
           durationSeconds: 20,
           projectExperience: 'character',
+          characterVideoQuality: 'high',
           characterSlug: 'ada-mentor',
           contentTone: 'playful',
           includeDefaultMusic: false,
@@ -169,6 +170,49 @@ describe('project creation from character slug', () => {
           videoGeneration: expect.objectContaining({
             mode: 'lipsync_runware',
             lipsyncPrompt: expect.any(String),
+          }),
+        }),
+      }),
+    }));
+  });
+
+  it('charges low-quality character projects at the low-quality fixed cost', async () => {
+    prismaMock.character.findFirst.mockResolvedValue({
+      id: 'char-1',
+      defaultVoiceId: null,
+      variations: [{ id: 'var-1' }],
+    });
+    resolveVoiceInfoMock.mockResolvedValue(null);
+
+    const route = await import('@/app/api/projects/route');
+    const req = new NextRequest('http://localhost/api/projects', {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt: 'Tell a short story',
+        durationSeconds: 30,
+        characterSlug: 'ada-mentor',
+        projectExperience: 'character',
+        characterVideoQuality: 'low',
+      }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    const res = await route.POST(req);
+    expect(res.status).toBe(200);
+    expect(spendTokensMock).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 10,
+      description: 'Project creation (character low quality)',
+      metadata: expect.objectContaining({
+        characterVideoQuality: 'low',
+        videoGenerationMode: 'lipsync_runpod',
+      }),
+    }), expect.anything());
+    expect(prismaMock.job.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        payload: expect.objectContaining({
+          characterVideoQuality: 'low',
+          videoGeneration: expect.objectContaining({
+            mode: 'lipsync_runpod',
           }),
         }),
       }),

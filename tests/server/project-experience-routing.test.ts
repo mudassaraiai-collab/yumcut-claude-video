@@ -144,6 +144,25 @@ describe('createProjectSchema projectExperience', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts public character video quality and rejects conflicting internal mode', () => {
+    const low = createProjectSchema.safeParse({
+      prompt: 'Prompt',
+      durationSeconds: 20,
+      projectExperience: 'character',
+      characterVideoQuality: 'low',
+    });
+    const conflict = createProjectSchema.safeParse({
+      prompt: 'Prompt',
+      durationSeconds: 20,
+      projectExperience: 'character',
+      characterVideoQuality: 'low',
+      videoGeneration: { mode: 'lipsync_runware' },
+    });
+
+    expect(low.success).toBe(true);
+    expect(conflict.success).toBe(false);
+  });
+
   it('rejects malformed character slug', () => {
     const result = createProjectSchema.safeParse({
       prompt: 'Prompt',

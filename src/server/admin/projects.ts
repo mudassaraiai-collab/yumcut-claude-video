@@ -9,6 +9,12 @@ import { calculateProjectTokenCost } from '@/shared/constants/token-costs';
 import { normalizeProjectExperience } from '@/shared/constants/project-experience';
 import { defaultCharacterVideoGeneration } from '@/shared/constants/video-generation';
 import {
+  CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE,
+  normalizeCharacterVideoGenerationMode,
+  normalizeCharacterVideoQuality,
+  qualityForVideoGenerationMode,
+} from '@/shared/constants/character-video-quality';
+import {
   PROJECT_ACTION_TOKEN_TYPES,
   PROJECT_RELATED_TOKEN_TYPES,
   extractProjectIdFromTokenMetadata,
@@ -260,6 +266,27 @@ export async function getProjectDetailForAdmin(projectId: string): Promise<Admin
 
   const projectExperience = normalizeProjectExperience((initialJob?.payload as any)?.projectExperience);
   const payloadVideoGeneration = (initialJob?.payload as any)?.videoGeneration;
+  const payloadVideoGenerationMode = normalizeCharacterVideoGenerationMode(payloadVideoGeneration?.mode);
+  const characterVideoQuality = projectExperience === 'character'
+    ? (payloadVideoGenerationMode
+      ? qualityForVideoGenerationMode(payloadVideoGenerationMode)
+      : normalizeCharacterVideoQuality((initialJob?.payload as any)?.characterVideoQuality))
+    : undefined;
+  const resolvedVideoGenerationMode = projectExperience === 'character'
+    ? (payloadVideoGenerationMode ?? CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE[characterVideoQuality ?? 'high'])
+    : null;
+  const resolvedVideoGeneration = resolvedVideoGenerationMode
+    ? {
+        mode: resolvedVideoGenerationMode,
+        ...(resolvedVideoGenerationMode === 'lipsync_runware'
+          ? {
+              lipsyncPrompt: typeof payloadVideoGeneration?.lipsyncPrompt === 'string' && payloadVideoGeneration.lipsyncPrompt.trim()
+                ? payloadVideoGeneration.lipsyncPrompt.trim()
+                : defaultCharacterVideoGeneration().lipsyncPrompt,
+            }
+          : {}),
+      }
+    : null;
   const creation = initialJob?.payload ? {
     durationSeconds: (initialJob.payload as any).durationSeconds ?? null,
     useExactTextAsScript: (initialJob.payload as any).useExactTextAsScript ?? null,
@@ -282,7 +309,8 @@ export async function getProjectDetailForAdmin(projectId: string): Promise<Admin
       ?? (p as any)?.languageVoiceAssignments
       ?? null,
     ),
-    videoGeneration: payloadVideoGeneration ?? (projectExperience === 'character' ? defaultCharacterVideoGeneration() : null),
+    characterVideoQuality,
+    videoGeneration: resolvedVideoGeneration,
     projectExperience,
     characterSelection: p.selection
       ? p.selection.userCharacterId

@@ -300,6 +300,7 @@ export default async function RootLayout({
         minimumProjectTokens: MINIMUM_PROJECT_TOKENS,
         minimumProjectSeconds: TOKEN_COSTS.minimumProjectSeconds,
         characterProjectTokens: CHARACTER_PROJECT_CREATION_TOKENS,
+        characterProjectTokenCosts: TOKEN_COSTS.characterProjects,
         actionCosts: TOKEN_COSTS.actions,
         signUpBonus: TOKEN_COSTS.signUpBonus,
       };

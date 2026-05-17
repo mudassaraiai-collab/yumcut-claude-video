@@ -7,6 +7,7 @@ import { ProjectStatus } from '@/shared/constants/status';
 import type { TemplateCustomData } from '@/shared/templates/custom-data';
 import type { ContentTone } from '@/shared/constants/content-tone';
 import type { ProjectExperience } from '@/shared/constants/project-experience';
+import type { CharacterVideoGenerationMode, CharacterVideoQuality } from '@/shared/constants/character-video-quality';
 import { loadConfig } from './config';
 import { log } from './logger';
 
@@ -382,8 +383,9 @@ export async function getCreationSnapshot(projectId: string): Promise<{
   scriptAvoidanceGuidance: string;
   audioStyleGuidanceEnabled: boolean;
   audioStyleGuidance: string;
+  characterVideoQuality?: CharacterVideoQuality;
   videoGeneration?: {
-    mode: 'lipsync_runware';
+    mode: CharacterVideoGenerationMode;
     lipsyncPrompt?: string | null;
   } | null;
   voiceId?: string | null;

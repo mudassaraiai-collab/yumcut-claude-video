@@ -8,7 +8,7 @@ import { LIMITS } from '@/server/limits';
 import { deriveTitleFromText } from '@/server/title';
 import { ProjectStatus } from '@/shared/constants/status';
 import { spendTokens, makeUserInitiator, TOKEN_TRANSACTION_TYPES } from '@/server/tokens';
-import { calculateProjectTokenCost, TOKEN_COSTS } from '@/shared/constants/token-costs';
+import { calculateCharacterProjectTokenCost, calculateProjectTokenCost, TOKEN_COSTS } from '@/shared/constants/token-costs';
 import { notifyAdminsOfNewProject } from '@/server/telegram';
 import { config } from '@/server/config';
 import { normalizeLanguageList, DEFAULT_LANGUAGE } from '@/shared/constants/languages';
@@ -24,8 +24,15 @@ import { sendProjectCreatedEmail } from '@/server/emails/project-lifecycle';
 import { normalizeProjectExperience } from '@/shared/constants/project-experience';
 import { normalizeContentTone } from '@/shared/constants/content-tone';
 import { defaultCharacterVideoGeneration } from '@/shared/constants/video-generation';
-import { CHARACTER_PROJECT_CREATION_TOKENS } from '@/shared/constants/subscriptions';
 import { CHARACTER_PROJECT_TARGET_DURATION_SECONDS } from '@/shared/constants/character-project';
+import {
+  CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE,
+  type CharacterVideoGenerationMode,
+  DEFAULT_CHARACTER_VIDEO_QUALITY,
+  normalizeCharacterVideoGenerationMode,
+  normalizeCharacterVideoQuality,
+  qualityForVideoGenerationMode,
+} from '@/shared/constants/character-video-quality';
 
 export const GET = withApiError(async function GET(req: NextRequest) {
   const auth = await authenticateApiRequest(req);
@@ -78,6 +85,7 @@ export const POST = withApiError(async function POST(req: NextRequest) {
     languages: requestedLanguages,
     languageVoices,
     videoGeneration,
+    characterVideoQuality,
     projectExperience,
     contentTone,
     includeDefaultMusic,
@@ -93,8 +101,19 @@ export const POST = withApiError(async function POST(req: NextRequest) {
     : (typeof durationSeconds === 'number' && durationSeconds > 0
       ? durationSeconds
       : TOKEN_COSTS.minimumProjectSeconds);
-  const effectiveVideoGeneration = videoGeneration
-    ?? (isCharacterExperience ? defaultCharacterVideoGeneration() : undefined);
+  const payloadVideoGenerationMode = normalizeCharacterVideoGenerationMode(videoGeneration?.mode);
+  const effectiveCharacterVideoQuality = isCharacterExperience
+    ? (payloadVideoGenerationMode
+      ? qualityForVideoGenerationMode(payloadVideoGenerationMode)
+      : normalizeCharacterVideoQuality(characterVideoQuality))
+    : DEFAULT_CHARACTER_VIDEO_QUALITY;
+  const effectiveVideoGeneration = isCharacterExperience
+    ? buildCharacterVideoGeneration({
+        mode: payloadVideoGenerationMode
+          ?? CHARACTER_VIDEO_QUALITY_TO_GENERATION_MODE[effectiveCharacterVideoQuality],
+        lipsyncPrompt: videoGeneration?.lipsyncPrompt,
+      })
+    : undefined;
   const normalizedContentTone = normalizeContentTone(contentTone);
   const normalizedCharacterSlug =
     typeof characterSlug === 'string' && characterSlug.trim().length > 0
@@ -272,7 +291,7 @@ export const POST = withApiError(async function POST(req: NextRequest) {
   }
 
   const tokenCost = isCharacterExperience
-    ? CHARACTER_PROJECT_CREATION_TOKENS
+    ? calculateCharacterProjectTokenCost(effectiveCharacterVideoQuality)
     : baseTokenCost * Math.max(languagesList.length, 1);
 
   const project = await prisma.$transaction(async (tx) => {
@@ -296,13 +315,19 @@ export const POST = withApiError(async function POST(req: NextRequest) {
       amount: tokenCost,
       type: TOKEN_TRANSACTION_TYPES.projectCreation,
       description: isCharacterExperience
-        ? 'Project creation (character fixed cost)'
+        ? `Project creation (character ${effectiveCharacterVideoQuality} quality)`
         : `Project creation (${effectiveSeconds}s)`,
       initiator: makeUserInitiator(userId),
       metadata: {
         projectId: created.id,
         durationSeconds: effectiveSeconds,
         languageCount: languagesList.length,
+        ...(isCharacterExperience
+          ? {
+              characterVideoQuality: effectiveCharacterVideoQuality,
+              videoGenerationMode: effectiveVideoGeneration?.mode ?? null,
+            }
+          : {}),
       },
     }, tx);
 
@@ -401,6 +426,7 @@ export const POST = withApiError(async function POST(req: NextRequest) {
           languageVoices: Object.keys(projectLanguageVoiceAssignments).length > 0 ? projectLanguageVoiceAssignments : undefined,
           languageVoiceProviders: Object.keys(projectLanguageVoiceProviders).length > 0 ? projectLanguageVoiceProviders : undefined,
           videoGeneration: effectiveVideoGeneration,
+          characterVideoQuality: isCharacterExperience ? effectiveCharacterVideoQuality : undefined,
           initiatorUserId: userId,
           scriptCreationGuidanceEnabled: isCharacterExperience
             ? false
@@ -478,3 +504,19 @@ export const POST = withApiError(async function POST(req: NextRequest) {
     createdAt: project.createdAt.toISOString(),
   } satisfies import('@/shared/types').ProjectListItemDTO);
 }, 'Failed to create project');
+
+function buildCharacterVideoGeneration(params: {
+  mode: CharacterVideoGenerationMode;
+  lipsyncPrompt?: string | null;
+}) {
+  if (params.mode === 'lipsync_runware') {
+    const defaultConfig = defaultCharacterVideoGeneration();
+    return {
+      mode: params.mode,
+      lipsyncPrompt: params.lipsyncPrompt?.trim() || defaultConfig.lipsyncPrompt,
+    };
+  }
+  return {
+    mode: params.mode,
+  };
+}

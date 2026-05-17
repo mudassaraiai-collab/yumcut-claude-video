@@ -1,3 +1,5 @@
+import type { CharacterVideoQuality } from './character-video-quality';
+
 export const TOKEN_TRANSACTION_TYPES = {
   signUpBonus: 'SIGN_UP_BONUS',
   emailReplyBonus: 'EMAIL_REPLY_BONUS',
@@ -21,6 +23,10 @@ export const TOKEN_COSTS = {
   subscriptionWinbackBonus: 100,
   perSecondProject: 1,
   minimumProjectSeconds: 30,
+  characterProjects: {
+    high: 75,
+    low: 10,
+  },
   actions: {
     scriptRevision: 10,
     audioRegeneration: 40,
@@ -30,6 +36,8 @@ export const TOKEN_COSTS = {
 } as const;
 
 export const MINIMUM_PROJECT_TOKENS = TOKEN_COSTS.minimumProjectSeconds * TOKEN_COSTS.perSecondProject;
+export const CHARACTER_PROJECT_TOKEN_COSTS = TOKEN_COSTS.characterProjects;
+export const CHARACTER_PROJECT_CREATION_TOKENS = TOKEN_COSTS.characterProjects.high;
 
 export function calculateProjectTokenCost(durationSeconds?: number | null) {
   const seconds = typeof durationSeconds === 'number' && durationSeconds > 0
@@ -37,4 +45,10 @@ export function calculateProjectTokenCost(durationSeconds?: number | null) {
     : TOKEN_COSTS.minimumProjectSeconds;
   const enforced = Math.max(seconds, TOKEN_COSTS.minimumProjectSeconds);
   return enforced * TOKEN_COSTS.perSecondProject;
+}
+
+export function calculateCharacterProjectTokenCost(quality?: CharacterVideoQuality | null) {
+  return quality === 'low'
+    ? TOKEN_COSTS.characterProjects.low
+    : TOKEN_COSTS.characterProjects.high;
 }
