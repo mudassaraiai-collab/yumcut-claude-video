@@ -95,12 +95,13 @@ type CharacterProfileCopy = {
   toastPlanAlreadyActive: string;
   toastSubscriptionUpdated: string;
   toastOpenCheckoutFailed: string;
-  lowTokensSubscribeLine: (balance: number) => string;
   topUpTitle: string;
   topUpDescription: string;
   tokensPerCharge: string;
   videosPerPeriod: (videos: number, period: 'week' | 'month') => string;
   paywallPerPeriod: (period: 'week' | 'month') => string;
+  paywallChipLabel: (planKey: SubscriptionPlanKey) => string;
+  paywallSubscribeWithPrice: (amount: string, periodLabel: string) => string;
   openingCheckout: string;
   subscribe: string;
   guestDownloadTitle: (name: string) => string;
@@ -164,13 +165,17 @@ const COPY: Record<AppLanguageCode, CharacterProfileCopy> = {
     toastPlanAlreadyActive: 'This plan is already active.',
     toastSubscriptionUpdated: 'Subscription updated.',
     toastOpenCheckoutFailed: 'Failed to open checkout',
-    lowTokensSubscribeLine: (balance) =>
-      `You currently have ${balance} tokens. You can subscribe to get more tokens and continue.`,
     topUpTitle: 'Top up with subscription',
     topUpDescription: 'Subscribe to automatically get more tokens after each successful charge.',
     tokensPerCharge: 'tokens per charge',
     videosPerPeriod: (videos, period) => `${videos} videos/${period}`,
     paywallPerPeriod: (period) => period,
+    paywallChipLabel: (planKey) => {
+      if (planKey === 'weekly') return 'Just to try';
+      if (planKey === 'monthly') return 'Most popular';
+      return 'Best choice';
+    },
+    paywallSubscribeWithPrice: (amount, periodLabel) => `Subscribe • ${amount}/${periodLabel}`,
     openingCheckout: 'Opening checkout...',
     subscribe: 'Subscribe',
     guestDownloadTitle: (name) => `Free ${name} character download`,
@@ -232,13 +237,17 @@ const COPY: Record<AppLanguageCode, CharacterProfileCopy> = {
     toastPlanAlreadyActive: 'Этот план уже активен.',
     toastSubscriptionUpdated: 'Подписка обновлена.',
     toastOpenCheckoutFailed: 'Не удалось открыть оплату',
-    lowTokensSubscribeLine: (balance) =>
-      `Сейчас у вас ${balance} токенов. Вы можете оформить подписку, чтобы получить больше токенов и продолжить.`,
     topUpTitle: 'Пополнение через подписку',
     topUpDescription: 'Оформите подписку, чтобы автоматически получать токены после каждого успешного списания.',
     tokensPerCharge: 'токенов за списание',
     videosPerPeriod: (videos, period) => `${videos} видео/${period === 'week' ? 'неделю' : 'месяц'}`,
     paywallPerPeriod: (period) => (period === 'week' ? 'неделю' : 'месяц'),
+    paywallChipLabel: (planKey) => {
+      if (planKey === 'weekly') return 'Просто попробовать';
+      if (planKey === 'monthly') return 'Самый популярный';
+      return 'Лучший выбор';
+    },
+    paywallSubscribeWithPrice: (amount, periodLabel) => `Подписаться • ${amount}/${periodLabel}`,
     openingCheckout: 'Открываем оплату...',
     subscribe: 'Подписаться',
     guestDownloadTitle: (name) => `Бесплатная загрузка персонажа ${name}`,
@@ -315,6 +324,7 @@ export function CharacterProfilePage({
   const favoriteInitializedRef = useRef(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<SubscriptionPlanKey | null>(null);
+  const [selectedPlanKey, setSelectedPlanKey] = useState<SubscriptionPlanKey>('monthly');
 
   const canAttemptCreation = useMemo(() => scriptText.trim().length > 0, [scriptText]);
   const shouldAnimatePlaceholder = !isPromptFocused && scriptText.length === 0;
@@ -363,6 +373,16 @@ export function CharacterProfilePage({
     [copy.defaultPromptPlaceholder, copy.interactivePrompts],
   );
   const subscriptionPlans = getSubscriptionPlansForUi();
+  const selectedPlan = subscriptionPlans.find((plan) => plan.planKey === selectedPlanKey) ?? subscriptionPlans[0] ?? null;
+  const selectedPerLabel = selectedPlan ? copy.paywallPerPeriod(selectedPlan.interval) : copy.paywallPerPeriod('month');
+  const selectedPlanAmount = selectedPlan ? `$${selectedPlan.priceUsd.toFixed(2)}` : '$0.00';
+
+  useEffect(() => {
+    if (subscriptionPlans.some((plan) => plan.planKey === selectedPlanKey)) return;
+    if (subscriptionPlans[0]) {
+      setSelectedPlanKey(subscriptionPlans[0].planKey);
+    }
+  }, [selectedPlanKey, subscriptionPlans]);
 
   const applyToolPrefill = useMemo(
     () => (prefill: ToolLandingPrefill) => {
@@ -623,6 +643,11 @@ export function CharacterProfilePage({
 
     if (status !== 'authenticated') {
       setAuthOpen(true);
+      return;
+    }
+    if (!hasEnoughTokens) {
+      setSelectedPlanKey('monthly');
+      setPaywallOpen(true);
       return;
     }
     setConfirmOpen(true);
@@ -989,15 +1014,6 @@ export function CharacterProfilePage({
             <span className="font-semibold text-gray-900 dark:text-gray-100">{projectedBalance}</span>{' '}
             {copy.confirmBalanceOutro}
           </p>
-          {!hasEnoughTokens ? (
-            <button
-              type="button"
-              className="cursor-pointer text-left text-sm text-blue-700 underline decoration-blue-300 decoration-dotted underline-offset-4 transition hover:text-blue-800 dark:text-blue-300 dark:decoration-blue-700 dark:hover:text-blue-200"
-              onClick={() => setPaywallOpen(true)}
-            >
-              {copy.lowTokensSubscribeLine(balance)}
-            </button>
-          ) : null}
           <div className="mt-4 flex items-center justify-end gap-2">
             <Button
               type="button"
@@ -1033,23 +1049,29 @@ export function CharacterProfilePage({
           </p>
           <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {subscriptionPlans.map((plan) => {
-              const isLoading = checkoutPlan === plan.planKey;
+              const isSelected = selectedPlan?.planKey === plan.planKey;
               const perLabel = copy.paywallPerPeriod(plan.interval);
               return (
-                <div
+                <button
+                  type="button"
                   key={plan.planKey}
+                  onClick={() => setSelectedPlanKey(plan.planKey)}
+                  disabled={checkoutPlan !== null}
                   className={[
-                    'min-w-0 rounded-xl border p-5',
-                    plan.planKey === 'monthly'
-                      ? 'border-blue-300 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-950/20'
-                      : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900/40',
+                    'min-w-0 cursor-pointer rounded-2xl border p-5 text-left transition-[border-color,box-shadow,background-color,transform] duration-200',
+                    isSelected
+                      ? 'border-blue-400 bg-blue-50/60 shadow-[0_12px_28px_rgba(37,99,235,0.18)] dark:border-blue-700 dark:bg-blue-950/25'
+                      : 'border-gray-200 bg-white hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900/40 dark:hover:border-blue-800',
                   ].join(' ')}
                 >
+                  <div className="mb-3 inline-flex rounded-full border border-amber-300/70 bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-900 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200">
+                    {copy.paywallChipLabel(plan.planKey)}
+                  </div>
                   <div className="flex items-end justify-center gap-1 whitespace-nowrap">
                     <span className="text-4xl font-bold leading-none text-gray-900 dark:text-gray-100">${plan.priceUsd.toFixed(2)}</span>
                     <span className="pb-0.5 text-lg text-gray-500 dark:text-gray-400">/{perLabel}</span>
                   </div>
-                  <div className="mt-5 space-y-2 text-lg text-gray-700 dark:text-gray-300">
+                  <div className="mt-4 space-y-1.5 text-base text-gray-700 dark:text-gray-300">
                     {plan.ui.benefits.map((benefit, benefitIndex) => {
                       if (benefit.key === 'tokens_per_charge' && typeof benefit.tokens === 'number') {
                         return <p key={`${plan.planKey}-benefit-${benefitIndex}`}>{benefit.tokens.toLocaleString()} {copy.tokensPerCharge}</p>;
@@ -1060,28 +1082,31 @@ export function CharacterProfilePage({
                       return null;
                     })}
                   </div>
-                  <Button
-                    type="button"
-                    className="mt-3 w-full cursor-pointer"
-                    onClick={() => void openSubscriptionCheckout(plan.planKey)}
-                    disabled={checkoutPlan !== null}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {copy.openingCheckout}
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        {copy.subscribe}
-                      </>
-                    )}
-                  </Button>
-                </div>
+                </button>
               );
             })}
           </div>
+          <Button
+            type="button"
+            className="brainrot-cta-gradient mt-4 w-full cursor-pointer rounded-2xl border-0 px-5 py-3 text-base font-semibold text-black shadow-lg outline-none transition hover:text-black hover:shadow-xl focus-visible:outline-none"
+            onClick={() => {
+              if (!selectedPlan) return;
+              void openSubscriptionCheckout(selectedPlan.planKey);
+            }}
+            disabled={checkoutPlan !== null || !selectedPlan}
+          >
+            {checkoutPlan ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {copy.openingCheckout}
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                {copy.paywallSubscribeWithPrice(selectedPlanAmount, selectedPerLabel)}
+              </>
+            )}
+          </Button>
         </DialogContent>
       </Dialog>
 
