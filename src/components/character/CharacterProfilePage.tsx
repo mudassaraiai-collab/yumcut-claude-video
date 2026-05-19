@@ -1050,7 +1050,7 @@ export function CharacterProfilePage({
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {copy.topUpDescription}
           </p>
-          <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
             {copy.paywallCurrentBalance(balance)}
           </p>
           <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
