@@ -189,6 +189,21 @@ export function Sidebar({ initialOpen = true }: { initialOpen?: boolean }) {
         </ScrollArea>
 
         <Separator />
+        <div className="px-2 py-2">
+          <Button
+            asChild
+            variant="ghost"
+            className="w-full justify-start gap-2 px-3 py-2 h-auto rounded-md bg-gradient-to-r from-violet-500/10 to-blue-500/10 hover:from-violet-500/20 hover:to-blue-500/20 border border-violet-200/50 dark:border-violet-800/50"
+          >
+            <Link href="/claude" className="flex items-center gap-2">
+              <span className="text-lg">✨</span>
+              <span className={cn("text-sm font-medium text-violet-700 dark:text-violet-300", !open && "hidden")}>
+                Claude Generator
+              </span>
+            </Link>
+          </Button>
+        </div>
+        <Separator />
         <div className="p-3">
           <Popover>
             <PopoverTrigger asChild>
