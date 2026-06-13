@@ -1,0 +1,38 @@
+{
+  "name": "YumCut Claude Video",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "postCreateCommand": "npm install && npm install @anthropic-ai/sdk && cp example.env .env && echo ANTHROPIC_API_KEY=paste_your_key_here >> .env",
+  "postStartCommand": "npm run dev",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "YumCut App",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "prisma.prisma"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    },
+    "codespaces": {
+      "openFiles": [
+        ".env",
+        "CLAUDE_SETUP.md"
+      ]
+    }
+  }
+}
