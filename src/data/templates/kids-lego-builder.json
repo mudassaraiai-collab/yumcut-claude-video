@@ -1,0 +1,55 @@
+{
+  "id": "kids-lego-builder",
+  "name": "Kids Lego Builder",
+  "description": "Fun animated-style video for kids aged 4-10 building a Lego set step by step",
+  "emoji": "🧱",
+  "category": "kids",
+  "defaults": {
+    "durationSeconds": 60,
+    "contentTone": "engaging",
+    "captionsEnabled": true,
+    "watermarkEnabled": false,
+    "includeDefaultMusic": true,
+    "addOverlay": true,
+    "includeCallToAction": true,
+    "language": "en"
+  },
+  "promptTemplate": "Step by step kids guide to building a Lego {SET_NAME} set, fun and energetic for children aged 4-10. Use simple words, lots of excitement and short sentences. Include: opening the box, sorting pieces by colour, snapping bricks together, adding details, and celebrating the finished build.",
+  "mustHave": "sound effects descriptions, encouragement for kids, high five at the end",
+  "avoid": "complex words, long sentences, anything scary or negative",
+  "presets": [
+    {
+      "label": "Lego Castle",
+      "prompt": "Step by step kids guide to building a Lego Castle set, fun and energetic for children aged 4-10",
+      "mustHave": "knights, towers, castle walls, high five at the end"
+    },
+    {
+      "label": "Lego City",
+      "prompt": "Step by step kids guide to building a Lego City set with cars and buildings, fun for kids aged 4-10",
+      "mustHave": "cars, roads, buildings, police station, high five at the end"
+    },
+    {
+      "label": "Lego Space",
+      "prompt": "Step by step kids guide to building a Lego Space rocket set, fun and energetic for children aged 4-10",
+      "mustHave": "rockets, astronauts, stars, blast off moment, high five at the end"
+    },
+    {
+      "label": "Lego Friends",
+      "prompt": "Step by step kids guide to building a Lego Friends set with a playhouse, fun for kids aged 4-10",
+      "mustHave": "colourful bricks, friends characters, playhouse, high five at the end"
+    },
+    {
+      "label": "Lego Technic",
+      "prompt": "Step by step kids guide to building a Lego Technic car, fun and energetic for children aged 6-10",
+      "mustHave": "gears, wheels, engine parts, wow moment, high five at the end"
+    }
+  ],
+  "style": {
+    "colorScheme": ["#FFD700", "#FF4500", "#1E90FF", "#32CD32"],
+    "font": "rounded",
+    "mood": "playful",
+    "visualStyle": "bright cartoon animation style, colourful Lego bricks, white background"
+  },
+  "imagePromptPrefix": "Bright colourful cartoon animation style, child-friendly, Lego bricks,",
+  "voiceStyle": "energetic, friendly, enthusiastic children presenter voice"
+}
