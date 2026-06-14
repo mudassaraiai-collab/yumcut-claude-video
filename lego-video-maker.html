@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kids Lego Video Maker 🧱</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: linear-gradient(135deg, #FFF9C4 0%, #FFECB3 50%, #FFF3E0 100%); min-height: 100vh; padding: 20px; }
+  .container { max-width: 600px; margin: 0 auto; }
+  .header { background: linear-gradient(135deg, #FFD600, #FF6D00, #2979FF); border-radius: 20px; padding: 24px; color: white; text-align: center; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(255,109,0,0.3); }
+  .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+  .header p { font-size: 14px; opacity: 0.9; }
+  .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .card h3 { font-size: 14px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .preset-btn { padding: 14px 10px; border: 2px solid #E0E0E0; border-radius: 12px; background: white; cursor: pointer; font-size: 14px; font-weight: 600; text-align: center; transition: all 0.2s; }
+  .preset-btn:hover { border-color: #FFD600; background: #FFFDE7; }
+  .preset-btn.active { border-color: #FF6D00; background: #FFF3E0; color: #E65100; }
+  .input-group { margin-bottom: 14px; }
+  .input-group label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+  .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 10px 14px; border: 2px solid #E0E0E0; border-radius: 10px; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: #FF6D00; }
+  .input-group textarea { min-height: 70px; resize: none; }
+  .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 800; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
+  .btn-primary { background: linear-gradient(135deg, #FFD600, #FF6D00); color: white; box-shadow: 0 4px 16px rgba(255,109,0,0.4); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,109,0,0.5); }
+  .btn-primary:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+  .btn-green { background: linear-gradient(135deg, #00C853, #1B5E20); color: white; box-shadow: 0 4px 16px rgba(0,200,83,0.4); }
+  .btn-green:hover { transform: translateY(-2px); }
+  .btn-outline { background: white; color: #666; border: 2px solid #E0E0E0; }
+  .result-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: 2px solid #FFF9C4; }
+  .result-section { margin-bottom: 16px; }
+  .result-label { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .copy-btn { font-size: 12px; color: #FF6D00; background: none; border: none; cursor: pointer; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #FFF3E0; }
+  .copy-btn:hover { background: #FFE0B2; }
+  .result-text { background: #FAFAFA; border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6; color: #333; max-height: 200px; overflow-y: auto; }
+  .hashtags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hashtag { background: #FFF9C4; color: #E65100; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+  .loading { text-align: center; padding: 40px 20px; }
+  .loading .emoji { font-size: 48px; animation: bounce 0.6s infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+  .loading h3 { font-size: 18px; font-weight: 700; margin: 16px 0 8px; color: #333; }
+  .loading p { font-size: 14px; color: #888; }
+  .dots { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #FFD600; animation: pulse 0.8s infinite alternate; }
+  .dot:nth-child(2) { animation-delay: 0.2s; background: #FF6D00; }
+  .dot:nth-child(3) { animation-delay: 0.4s; background: #2979FF; }
+  @keyframes pulse { from { opacity: 0.3; transform: scale(0.8); } to { opacity: 1; transform: scale(1.2); } }
+  .error { background: #FFEBEE; border: 2px solid #FFCDD2; border-radius: 12px; padding: 14px; color: #C62828; font-size: 14px; margin-bottom: 14px; }
+  .step-bar { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 20px; font-size: 12px; font-weight: 600; }
+  .step { padding: 4px 10px; border-radius: 20px; background: #EEE; color: #999; }
+  .step.active { background: #FF6D00; color: white; }
+  .step.done { background: #00C853; color: white; }
+  .done-card { text-align: center; padding: 30px 20px; }
+  .done-card .emoji { font-size: 64px; }
+  .done-card h2 { font-size: 24px; font-weight: 800; margin: 16px 0 8px; }
+  .done-card p { color: #888; font-size: 14px; margin-bottom: 20px; }
+  .api-key-note { background: #E3F2FD; border-radius: 10px; padding: 12px; font-size: 13px; color: #1565C0; margin-bottom: 14px; }
+  .api-key-note a { color: #1565C0; font-weight: 700; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🧱 Kids Lego Video Maker</h1>
+    <p>Claude writes the script • Ready to film or animate</p>
+  </div>
+
+  <!-- Step bar -->
+  <div class="step-bar">
+    <span class="step active" id="step1">1. Pick set</span>
+    <span>→</span>
+    <span class="step" id="step2">2. Script</span>
+    <span>→</span>
+    <span class="step" id="step3">3. Done!</span>
+  </div>
+
+  <!-- SCREEN 1: Pick preset -->
+  <div id="screen-pick">
+    <div class="card">
+      <h3>Pick a Lego Set</h3>
+      <div class="preset-grid">
+        <button class="preset-btn" onclick="selectPreset(this, 'Step by step kids guide to building a Lego Castle with knights and towers, fun for children aged 4-10', 'knights, towers, drawbridge, high five at the end')">🏰 Castle</button>
+        <button class="preset-btn" onclick="selectPreset(this, 'Step by step kids guide to building a Lego City with cars and police station, fun for children aged 4-10', 'cars, roads, police station, high five at the end')">🚗 City</button>
+        <button class="preset-btn" onclick="selectPreset(this, 'Step by step kids guide to building a Lego Space rocket and astronauts, fun for children aged 4-10', 'rockets, astronauts, stars, blast off, high five at the end')">🚀 Space</button>
+        <button class="preset-btn" onclick="selectPreset(this, 'Step by step kids guide to building a Lego Friends playhouse with colourful characters, fun for children aged 4-10', 'friends characters, playhouse, flowers, high five at the end')">🏠 Friends</button>
+        <button class="preset-btn" onclick="selectPreset(this, 'Step by step kids guide to building a Lego Technic racing car with gears, fun for children aged 6-10', 'gears, wheels, engine, race track, high five at the end')">⚙️ Technic</button>
+        <button class="preset-btn" onclick="selectPreset(this, 'Step by step kids guide to building a Lego Harry Potter Hogwarts set, fun for children aged 6-10', 'magic, castle, wizard, Harry Potter, high five at the end')">⚡ Harry Potter</button>
+      </div>
+
+      <div class="input-group">
+        <label>Or type your own Lego set</label>
+        <input type="text" id="custom-prompt" placeholder="e.g. Lego Minecraft Creeper set for kids aged 7-10" oninput="clearPresets()">
+      </div>
+
+      <div class="input-group">
+        <label>Duration</label>
+        <select id="duration">
+          <option value="30">30 seconds</option>
+          <option value="60" selected>60 seconds</option>
+          <option value="90">90 seconds</option>
+        </select>
+      </div>
+
+      <div class="api-key-note">
+        🔑 Need your Claude API key? Get it free at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>
+      </div>
+
+      <div class="input-group">
+        <label>Your Anthropic API Key</label>
+        <input type="password" id="api-key" placeholder="sk-ant-...">
+      </div>
+
+      <button class="btn btn-primary" id="gen-btn" onclick="generate()">✨ Generate Kids Script with Claude</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Loading -->
+  <div id="screen-loading" class="hidden">
+    <div class="card loading">
+      <div class="emoji">🧱</div>
+      <h3>Claude is writing the script...</h3>
+      <p>Making it super fun for kids!</p>
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: Result -->
+  <div id="screen-result" class="hidden">
+    <div class="result-card">
+      <div class="result-section">
+        <div class="result-label">
+          🎬 Video Title
+        </div>
+        <div class="result-text" id="result-title" style="font-weight:700; font-size:16px;"></div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-label">
+          📝 60s Script (read this as voiceover)
+          <button class="copy-btn" onclick="copyText('result-script', this)">Copy</button>
+        </div>
+        <div class="result-text" id="result-script"></div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-label">
+          📱 Caption
+          <button class="copy-btn" onclick="copyText('result-caption', this)">Copy</button>
+        </div>
+        <div class="result-text" id="result-caption"></div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-label">
+          # Hashtags
+          <button class="copy-btn" onclick="copyHashtags()">Copy All</button>
+        </div>
+        <div class="hashtags" id="result-hashtags"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-green" onclick="showDone()">🎬 Mark as Done & Save</button>
+    <button class="btn btn-outline" onclick="reset()">← Make Another Video</button>
+  </div>
+
+  <!-- SCREEN 4: Done -->
+  <div id="screen-done" class="hidden">
+    <div class="card done-card">
+      <div class="emoji">🎉</div>
+      <h2>Script is Ready!</h2>
+      <p>Use this script to record your video or paste it into any AI video tool like CapCut, InVideo, or Pictory.</p>
+      <button class="btn btn-primary" onclick="reset()">Make Another Video 🧱</button>
+    </div>
+  </div>
+
+  <div id="error-box" class="error hidden"></div>
+</div>
+
+<script>
+let selectedPrompt = '';
+let selectedMustHave = '';
+let currentResult = null;
+
+function selectPreset(btn, prompt, mustHave) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedPrompt = prompt;
+  selectedMustHave = mustHave;
+  document.getElementById('custom-prompt').value = '';
+}
+
+function clearPresets() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  selectedPrompt = '';
+  selectedMustHave = '';
+}
+
+function showScreen(name) {
+  ['pick','loading','result','done'].forEach(s => {
+    document.getElementById('screen-'+s).classList.add('hidden');
+  });
+  document.getElementById('screen-'+name).classList.remove('hidden');
+}
+
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('step'+i);
+    el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent = '❌ ' + msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 6000);
+}
+
+async function generate() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  const customPrompt = document.getElementById('custom-prompt').value.trim();
+  const duration = document.getElementById('duration').value;
+  const prompt = selectedPrompt || customPrompt;
+
+  if (!apiKey) return showError('Please enter your Anthropic API key');
+  if (!prompt) return showError('Please pick a Lego set or type your own');
+
+  showScreen('loading');
+  setStep(2);
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: 'You are a kids video scriptwriter for TikTok and YouTube Shorts. Write fun, energetic scripts for children aged 4-10. Use simple words, short sentences, lots of excitement. Respond ONLY with valid JSON, no markdown.',
+        messages: [{
+          role: 'user',
+          content: `Create a ${duration}-second kids video script about: "${prompt}".
+Must include: ${selectedMustHave || 'encouragement, high five at the end'}.
+Avoid: complex words, scary content, long sentences.
+
+Respond ONLY with this JSON:
+{"title":"catchy title max 8 words","script":"full ${duration}s narration fun and energetic for kids","caption":"instagram caption with emojis max 150 chars","hashtags":["lego","legoforkids","kidsvideo","legobuilding","funforkids","kidsyoutube","legoset","toddlers","legotiktok","buildwithme"]}`
+        }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'API error ' + res.status);
+    }
+
+    const data = await res.json();
+    const text = data.content[0].text.replace(/```json|```/g,'').trim();
+    currentResult = JSON.parse(text);
+
+    document.getElementById('result-title').textContent = currentResult.title;
+    document.getElementById('result-script').textContent = currentResult.script;
+    document.getElementById('result-caption').textContent = currentResult.caption;
+
+    const hashContainer = document.getElementById('result-hashtags');
+    hashContainer.innerHTML = '';
+    currentResult.hashtags.forEach(tag => {
+      const span = document.createElement('span');
+      span.className = 'hashtag';
+      span.textContent = '#' + tag;
+      hashContainer.appendChild(span);
+    });
+
+    showScreen('result');
+    setStep(2);
+  } catch(err) {
+    showScreen('pick');
+    setStep(1);
+    showError(err.message);
+  }
+}
+
+function copyText(id, btn) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text);
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = orig, 2000);
+}
+
+function copyHashtags() {
+  if (!currentResult) return;
+  const text = currentResult.hashtags.map(h => '#'+h).join(' ');
+  navigator.clipboard.writeText(text);
+}
+
+function showDone() {
+  showScreen('done');
+  setStep(3);
+}
+
+function reset() {
+  showScreen('pick');
+  setStep(1);
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  selectedPrompt = '';
+  selectedMustHave = '';
+  currentResult = null;
+}
+</script>
+</body>
+</html>
